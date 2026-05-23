@@ -1,0 +1,67 @@
+# AgentGate risk policy
+#
+# Entries here OVERRIDE the risk= / mode= / sensitive= flags passed to gate()
+# in the agent code. The intent is that the security team owns this file via
+# PR review, while the agent developer just writes `gate(my_tool)` and the
+# right policy is applied automatically. No risk classification scattered
+# across the codebase.
+#
+# Schema per tool:
+#   risk       low | high          required
+#   mode       approval | input    default: approval
+#   sensitive  true | false        default: false  (routes through PII redactor)
+#
+# Loaded by agentgate_sdk/policy.py. Override the path via AGENTGATE_POLICY_FILE.
+
+defaults:
+  risk: low
+  mode: approval
+  sensitive: false
+
+tools:
+  # ---------------------------------------------------------------------------
+  # Domain-buying demo (agent.run)
+  # ---------------------------------------------------------------------------
+  search_domain:
+    risk: low                # pure read
+  check_price:
+    risk: low                # pure read
+  verify_customer_identity:
+    risk: low                # auto-passed but PII-redacted before reaching the LLM
+    sensitive: true
+  solve_captcha:
+    risk: high               # human-as-tool: the user supplies the answer
+    mode: input
+  execute_purchase:
+    risk: high               # spends real money; requires human approval
+    mode: approval
+
+  # ---------------------------------------------------------------------------
+  # Bank-login demo (agent.bank_run)
+  # ---------------------------------------------------------------------------
+  navigate:
+    risk: low
+  enter_credentials:
+    risk: low                # credentials never reach the cloud LLM
+    sensitive: true
+  enter_otp:
+    risk: high               # OTP must come from the human's authenticator app
+    mode: input
+  read_transactions:
+    risk: low                # PII (names, accounts) stripped before the LLM sees it
+    sensitive: true
+
+  # ---------------------------------------------------------------------------
+  # Prompt-injection demo (agent.injection_run)
+  # ---------------------------------------------------------------------------
+  search_news:
+    risk: low
+  read_webpage:
+    risk: low                # body is untrusted input - downstream tools are gated
+  post_to_url:
+    risk: high               # arbitrary outbound network egress; human must approve
+    mode: approval
+
+  # ---------------------------------------------------------------------------
+  # Add your own tools here. Anything NOT listed inherits `defaults`.
+  # ---------------------------------------------------------------------------

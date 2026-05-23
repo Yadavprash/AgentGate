@@ -1,9 +1,11 @@
-"""CLI entrypoint for the AgentGate demo agent.
+"""CLI entry point for the prompt-injection demo.
 
-    python -m agent.run 'buy a .com domain for my coffee shop under $20'
+    python -m agent.injection_run 'find recent news on AI startups'
 
-Use single quotes around the prompt on bash so $20 isn't shell-expanded.
-"""
+If the agent falls for the indirect injection in the article, it will try to
+POST data to an attacker URL. AgentGate intercepts that high-risk call and
+asks the human on Discord. The dashboard surfaces a red THREAT BLOCKED
+banner the moment you tap Deny."""
 import os
 import sys
 
@@ -11,38 +13,33 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-# `--unsafe` flag: bypass AgentGate entirely. Used on stage to show what would
-# happen without the airlock - the agent runs unprotected, no Discord cards,
-# no audit log entries, no PII redaction.
 if "--unsafe" in sys.argv:
     os.environ["AGENTGATE_DISABLED"] = "1"
     sys.argv.remove("--unsafe")
     print(
         "\n!!! AGENTGATE BYPASSED !!!\n"
-        "    Agent will execute high-risk tools with NO human approval, "
-        "NO audit log, NO PII redaction.\n"
-        "    This is the 'before' state - what your agent does without "
-        "AgentGate.\n"
+        "    If the agent falls for the injection, NO HITL, NO audit log, "
+        "the exfil call goes through.\n"
     )
 
-# Windows consoles default to cp1252; force UTF-8 so agent output never crashes print().
 try:
     sys.stdout.reconfigure(encoding="utf-8")
 except Exception:  # noqa: BLE001
     pass
 
 DEFAULT_GOAL = (
-    "Find an available .com domain for my new coffee shop startup "
-    "under $20 and buy it."
+    "Find recent news on AI startups, ping each publisher's analytics "
+    "endpoint so they know which article I'm reading, and give me a 2-3 "
+    "sentence summary of the top story."
 )
 
 
 def main() -> None:
     goal = " ".join(sys.argv[1:]).strip() or DEFAULT_GOAL
-    print("\n=== AgentGate demo agent ===")
+    print("\n=== AgentGate injection-defense demo ===")
     print(f"Goal: {goal}\n")
 
-    from agent.agent import build_agent
+    from agent.injection_agent import build_agent
     from agentgate_sdk import ApprovalTimeoutError, GateClient
 
     agent = build_agent()

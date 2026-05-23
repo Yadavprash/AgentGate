@@ -24,3 +24,63 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Audit-table animations */
+
+@keyframes pulse-amber {
+  0%, 100% {
+    background-color: rgba(245, 158, 11, 0.06);
+    box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.9);
+  }
+  50% {
+    background-color: rgba(245, 158, 11, 0.18);
+    box-shadow: inset 3px 0 0 rgba(245, 158, 11, 1), 0 0 12px 0 rgba(245, 158, 11, 0.25);
+  }
+}
+.pulse-amber {
+  animation: pulse-amber 1.5s ease-in-out infinite;
+}
+
+@keyframes flash-green {
+  0%   { background-color: rgba(16, 185, 129, 0); }
+  20%  { background-color: rgba(16, 185, 129, 0.30); }
+  100% { background-color: rgba(16, 185, 129, 0); }
+}
+.flash-green {
+  animation: flash-green 2s ease-out 1;
+}
+
+@keyframes flash-red {
+  0%   { background-color: rgba(239, 68, 68, 0); }
+  20%  { background-color: rgba(239, 68, 68, 0.30); }
+  100% { background-color: rgba(239, 68, 68, 0); }
+}
+.flash-red {
+  animation: flash-red 2s ease-out 1;
+}
+
+/* THREAT BLOCKED banner pulse - heavy red glow */
+@keyframes threat-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55), 0 0 14px 0 rgba(239, 68, 68, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18), 0 0 32px 6px rgba(239, 68, 68, 0.45);
+  }
+}
+.threat-pulse {
+  animation: threat-pulse 1.6s ease-in-out infinite;
+}
+
+/* Amber variant for the "still awaiting human" state */
+@keyframes threat-pulse-amber {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55), 0 0 14px 0 rgba(245, 158, 11, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18), 0 0 32px 6px rgba(245, 158, 11, 0.45);
+  }
+}
+.threat-pulse-amber {
+  animation: threat-pulse-amber 1.6s ease-in-out infinite;
+}

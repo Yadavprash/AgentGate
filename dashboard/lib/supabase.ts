@@ -19,6 +19,29 @@ export type ActionStatus =
   | "timed_out"
   | "failed";
 
+export type AuditEventType =
+  | "intercepted"
+  | "auto_approved"
+  | "approved"
+  | "denied"
+  | "timed_out"
+  | "completed"
+  | "failed"
+  | "redaction"
+  | "threat"
+  | "final_response";
+
+export type DecisionActor = "ai" | "human" | "system";
+
+export type DecisionKind =
+  | "tool_call"
+  | "approval"
+  | "input"
+  | "final_response"
+  | "completion"
+  | "redaction"
+  | "threat";
+
 export type ActionRow = {
   id: string;
   agent_id: string;
@@ -37,15 +60,16 @@ export type ActionRow = {
 
 export type AuditEventRow = {
   id: string;
-  action_id: string;
-  event_type: string;
-  actor: string | null;
-  decision_kind: string | null;
+  seq?: number;
+  action_id: string | null;
+  event_type: AuditEventType;
+  actor: DecisionActor | null;
+  decision_kind: DecisionKind | null;
   decision_version: number | null;
   payload: Record<string, unknown> | null;
   created_at: string;
-  prev_hash: string | null;
-  this_hash: string | null;
+  prev_hash?: string | null;
+  this_hash?: string | null;
 };
 
 export async function fetchAuditEvents(actionId: string) {
@@ -57,3 +81,4 @@ export async function fetchAuditEvents(actionId: string) {
     .order("created_at", { ascending: true });
   return (data || []) as AuditEventRow[];
 }
+>>>>>>> origin/main

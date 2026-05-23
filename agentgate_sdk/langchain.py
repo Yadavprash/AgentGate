@@ -7,10 +7,12 @@
 """
 import functools
 import inspect
+import os
 from typing import Any, Callable, Optional
 
 from langchain_core.tools import StructuredTool
 
+from agentgate_sdk import policy
 from agentgate_sdk.client import GateClient
 from agentgate_sdk.redactor import redact as _redact
 
@@ -48,6 +50,24 @@ def gate(
     """
     tool_name = name or func.__name__
     tool_desc = description or _first_line(func.__doc__) or tool_name
+
+    # `--unsafe` / AGENTGATE_DISABLED bypass - returns the tool unwrapped, no
+    # gateway, no HITL, no redaction. Used on stage to demo what happens WITHOUT
+    # AgentGate so the contrast lands.
+    if os.environ.get("AGENTGATE_DISABLED") == "1":
+        return StructuredTool.from_function(
+            func=func, name=tool_name, description=tool_desc
+        )
+
+    # Optional risk-policy override. If risk-policies.yaml lists this tool, the
+    # YAML wins - security teams own policy in version control, developers just
+    # call gate(my_tool) and pick up the right risk/mode/sensitive flags.
+    pol = policy.policy_for(tool_name)
+    if pol:
+        risk = pol.get("risk", risk)
+        mode = pol.get("mode", mode)
+        sensitive = pol.get("sensitive", sensitive)
+
     gate_client = client or _client()
 
     @functools.wraps(func)
@@ -92,7 +112,13 @@ def gate(
 
         if sensitive:
             # PII redaction happens locally before the agent (cloud LLM) ever sees it.
-            redacted, backend = _redact(str(output))
+            raw_text = str(output)
+            redacted, backend = _redact(raw_text)
+            # Push both to the gateway so the dashboard can render the
+            # before/after panel - best effort, never blocks.
+            gate_client.report_redaction(
+                result.get("job_id", ""), raw_text, redacted, backend
+            )
             output = f"[PII redacted locally via {backend}] {redacted}"
 
         if risk == "high":

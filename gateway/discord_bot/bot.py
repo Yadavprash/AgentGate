@@ -36,7 +36,20 @@ async def send_card(job_id: str, req: InterceptRequest) -> None:
             client.fetch_channel(settings.discord_channel_id)
         )
         if req.mode == "input":
-            view = CaptchaView(job_id)
+            d = req.display or {}
+            modal_kwargs = {
+                key: d[key]
+                for key in ("title", "input_label", "input_placeholder", "max_length")
+                if key in d
+            }
+            # Allow callers to also use the friendlier alias "modal_title".
+            if "modal_title" in d:
+                modal_kwargs["title"] = d["modal_title"]
+            view = CaptchaView(
+                job_id,
+                button_label=d.get("button_label", "Solve CAPTCHA"),
+                modal_kwargs=modal_kwargs,
+            )
         else:
             view = ApprovalView(
                 job_id, show_budget=req.display.get("cost") is not None

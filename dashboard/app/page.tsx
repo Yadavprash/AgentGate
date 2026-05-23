@@ -1,11 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import AuditTable from "@/components/AuditTable";
-import { supabase, supabaseConfigured, type ActionRow } from "@/lib/supabase";
+import DecisionTable from "@/components/DecisionTable";
+import HeroStats from "@/components/HeroStats";
+import ThreatBlocked from "@/components/ThreatBlocked";
+import WhatClaudeSaw from "@/components/WhatClaudeSaw";
+import {
+  supabase,
+  supabaseConfigured,
+  type ActionRow,
+  type AuditEventRow,
+} from "@/lib/supabase";
 
 export default function Home() {
   const [rows, setRows] = useState<ActionRow[]>([]);
+  const [decisionRows, setDecisionRows] = useState<AuditEventRow[]>([]);
   const [live, setLive] = useState(false);
 
   useEffect(() => {
@@ -21,7 +32,16 @@ export default function Home() {
         if (data) setRows(data as ActionRow[]);
       });
 
-    const channel = sb
+    sb
+      .from("audit_events")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200)
+      .then(({ data }) => {
+        if (data) setDecisionRows(data as AuditEventRow[]);
+      });
+
+    const actionsChannel = sb
       .channel("actions-feed")
       .on(
         "postgres_changes",
@@ -38,21 +58,28 @@ export default function Home() {
       )
       .subscribe((status) => setLive(status === "SUBSCRIBED"));
 
+    const decisionsChannel = sb
+      .channel("audit-events-feed")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "audit_events" },
+        (payload) => {
+          const row = payload.new as AuditEventRow;
+          if (!row?.id) return;
+          setDecisionRows((prev) =>
+            [row, ...prev.filter((r) => r.id !== row.id)]
+              .sort((a, b) => b.created_at.localeCompare(a.created_at))
+              .slice(0, 200),
+          );
+        },
+      )
+      .subscribe();
+
     return () => {
-      sb.removeChannel(channel);
+      sb.removeChannel(actionsChannel);
+      sb.removeChannel(decisionsChannel);
     };
   }, []);
-
-  const stats = useMemo(() => {
-    return {
-      total: rows.length,
-      intercepted: rows.filter((r) => r.status === "intercepted").length,
-      denied: rows.filter((r) => r.status === "denied").length,
-      passed: rows.filter((r) =>
-        ["auto_approved", "approved", "completed"].includes(r.status),
-      ).length,
-    };
-  }, [rows]);
 
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-10">
@@ -60,23 +87,31 @@ export default function Home() {
         <div>
           <h1 className="text-2xl font-semibold text-zinc-100">AgentGate</h1>
           <p className="text-sm text-zinc-500">
-            Live audit log of intercepted AI agent actions
+            Three-layer trust system for autonomous AI agents
           </p>
         </div>
-        <span
-          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
-            live
-              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-              : "border-zinc-700 bg-zinc-800 text-zinc-400"
-          }`}
-        >
+        <div className="flex items-center gap-3">
+          <Link
+            href="/pitch"
+            className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-purple-500/40 hover:bg-purple-500/10 hover:text-purple-200"
+          >
+            View pitch →
+          </Link>
           <span
-            className={`h-2 w-2 rounded-full ${
-              live ? "bg-emerald-400" : "bg-zinc-500"
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
+              live
+                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                : "border-zinc-700 bg-zinc-800 text-zinc-400"
             }`}
-          />
-          {live ? "Live" : "Connecting…"}
-        </span>
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                live ? "bg-emerald-400" : "bg-zinc-500"
+              }`}
+            />
+            {live ? "Live" : "Connecting…"}
+          </span>
+        </div>
       </header>
 
       {!supabaseConfigured && (
@@ -88,41 +123,11 @@ export default function Home() {
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-4 gap-4">
-        <Stat label="Total actions" value={stats.total} />
-        <Stat label="Auto / approved" value={stats.passed} tone="emerald" />
-        <Stat label="Awaiting human" value={stats.intercepted} tone="amber" />
-        <Stat label="Blocked" value={stats.denied} tone="red" />
-      </div>
-
+      <HeroStats rows={rows} />
+      <ThreatBlocked rows={rows} />
+      <WhatClaudeSaw rows={rows} />
       <AuditTable rows={rows} />
+      <DecisionTable rows={decisionRows} />
     </main>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  tone = "zinc",
-}: {
-  label: string;
-  value: number;
-  tone?: "zinc" | "emerald" | "amber" | "red";
-}) {
-  const colors: Record<string, string> = {
-    zinc: "text-zinc-100",
-    emerald: "text-emerald-300",
-    amber: "text-amber-300",
-    red: "text-red-300",
-  };
-  return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-      <div className="text-xs uppercase tracking-wide text-zinc-500">
-        {label}
-      </div>
-      <div className={`mt-1 text-2xl font-semibold ${colors[tone]}`}>
-        {value}
-      </div>
-    </div>
   );
 }

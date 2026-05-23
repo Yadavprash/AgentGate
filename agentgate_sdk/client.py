@@ -11,6 +11,8 @@ class ApprovalTimeoutError(Exception):
 
 
 class GateClient:
+    _last_job_by_agent: dict[str, str] = {}
+
     def __init__(
         self,
         base_url: Optional[str] = None,
@@ -56,7 +58,11 @@ class GateClient:
         if resp.status_code == 408:
             raise ApprovalTimeoutError(f"Approval for '{tool_name}' timed out.")
         resp.raise_for_status()
-        return resp.json()
+        result = resp.json()
+        job_id = result.get("job_id")
+        if isinstance(job_id, str) and job_id:
+            GateClient._last_job_by_agent[self.agent_id] = job_id
+        return result
 
     def complete(self, job_id: str, status: str = "completed") -> None:
         """Best-effort report that an approved action finished running."""
@@ -65,7 +71,6 @@ class GateClient:
             self._post_with_retries("/gate/complete", json={"job_id": job_id, "status": status}, retries=2, backoff=0.2)
         except Exception:  # noqa: BLE001 - completion ping is non-critical
             pass
-
     def _post_with_retries(self, path: str, json: Optional[dict] = None, retries: int = 3, backoff: float = 0.5) -> httpx.Response:
         url = f"{self.base_url.rstrip('/')}{path}"
         last_exc = None
@@ -81,3 +86,50 @@ class GateClient:
                 if attempt == retries:
                     raise
                 time.sleep(backoff * (2 ** (attempt - 1)))
+
+    def report_redaction(
+        self, job_id: str, raw: str, redacted: str, backend: str
+    ) -> None:
+        """Push raw + redacted text to the gateway so the dashboard can show
+        side-by-side proof. Best-effort: failures never block the agent."""
+        if not job_id:
+            return
+        try:
+            self._http.post(
+                f"{self.base_url}/gate/redaction",
+                json={
+                    "job_id": job_id,
+                    "raw_output": raw,
+                    "redacted_output": redacted,
+                    "backend": backend,
+                },
+            )
+        except Exception:  # noqa: BLE001
+            pass
+
+    def last_job_id(self) -> Optional[str]:
+        """Return the latest intercepted action id for this agent id."""
+        return GateClient._last_job_by_agent.get(self.agent_id)
+
+    def report_final_response(
+        self,
+        action_id: str,
+        summary: str,
+        status: str = "completed",
+    ) -> None:
+        """Push final agent response metadata into the audit trail.
+        Best-effort: failures never block the agent process."""
+        if not action_id:
+            return
+        try:
+            self._http.post(
+                f"{self.base_url}/gate/final_response",
+                json={
+                    "action_id": action_id,
+                    "status": status,
+                    "summary": summary,
+                    "answer_length": len(summary or ""),
+                },
+            )
+        except Exception:  # noqa: BLE001
+            pass

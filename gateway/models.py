@@ -28,3 +28,21 @@ class DecisionRequest(BaseModel):
 class CompleteRequest(BaseModel):
     job_id: str
     status: Literal["completed", "failed"] = "completed"
+
+
+class RedactionRequest(BaseModel):
+    """SDK reports back what the local PII redactor saw vs what it returned."""
+
+    job_id: str
+    raw_output: str
+    redacted_output: str
+    backend: str = "regex"
+
+
+class FinalResponseRequest(BaseModel):
+    """SDK reports a summarized final agent response for audit continuity."""
+
+    action_id: str
+    status: Literal["completed", "halted", "failed"] = "completed"
+    summary: str = ""
+    answer_length: int = 0

@@ -156,3 +156,17 @@ async def test_complete(client):
     )
     assert resp.status_code == 200
     assert resp.json()["ok"] is True
+
+
+async def test_final_response_event(client):
+    resp = await client.post(
+        "/gate/final_response",
+        json={
+            "action_id": "00000000-0000-0000-0000-000000000001",
+            "status": "completed",
+            "summary": "Agent selected cheapest valid option.",
+            "answer_length": 36,
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True

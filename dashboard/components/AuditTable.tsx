@@ -1,7 +1,19 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import type { ActionRow, AuditEventRow } from "@/lib/supabase";
 import StatusChip from "./StatusChip";
-import { useState, useEffect } from "react";
 import { fetchAuditEvents, supabase } from "@/lib/supabase";
+
+type Display = Record<string, unknown> | null;
+
+function formatElapsed(start: string): string {
+  const ms = Date.now() - new Date(start).getTime();
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 function time(ts: string) {
   return new Date(ts).toLocaleTimeString([], {
@@ -12,14 +24,37 @@ function time(ts: string) {
 }
 
 function detail(row: ActionRow) {
-  const summary = row.display?.summary;
+  const summary = (row.display as Display)?.summary;
   if (typeof summary === "string") return summary;
   return Object.entries(row.tool_args)
     .map(([k, v]) => `${k}=${String(v)}`)
     .join(", ");
 }
 
+function flashClassFor(row: ActionRow): string {
+  if (!row.decided_at) return "";
+  const decidedAge = Date.now() - new Date(row.decided_at).getTime();
+  if (decidedAge < 0 || decidedAge > 2500) return "";
+  if (row.status === "denied" || row.status === "timed_out") return "flash-red";
+  if (
+    row.status === "approved" ||
+    row.status === "completed" ||
+    row.status === "auto_approved"
+  ) {
+    return "flash-green";
+  }
+  return "";
+}
+
 export default function AuditTable({ rows }: { rows: ActionRow[] }) {
+  // Re-render every second so the countdown ticks and the 2-second flash window
+  // gets re-evaluated.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-10 text-center text-zinc-500">
@@ -43,46 +78,45 @@ export default function AuditTable({ rows }: { rows: ActionRow[] }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-800 bg-zinc-950">
-          {rows.map((row) => (
-            <tr key={row.id} className="hover:bg-zinc-900/60">
-              <td className="px-4 py-3 font-mono text-xs text-zinc-500">
-                {time(row.created_at)}
-              </td>
-              <td className="px-4 py-3 text-zinc-300">{row.agent_name}</td>
-              <td className="px-4 py-3 font-mono text-xs text-zinc-200">
-                <span className="inline-flex items-center gap-1.5">
-                  {row.tool_name}
-                  {(row.display as Record<string, unknown> | null)?.redacted ? (
-                    <span
-                      title="PII redacted locally - cloud LLM never saw the raw value"
-                      className="rounded border border-purple-500/40 bg-purple-500/15 px-1.5 py-0.5 text-[10px] font-medium text-purple-300"
-                    >
-                      🔒 PII
-                    </span>
-                  ) : null}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-zinc-400">{detail(row)}</td>
-              <td className="px-4 py-3">
-                <span
-                  className={
-                    row.risk === "high" ? "text-red-400" : "text-zinc-500"
-                  }
-                >
-                  {row.risk.toUpperCase()}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-zinc-300">
-                {row.cost != null ? `$${Number(row.cost).toFixed(2)}` : "—"}
-              </td>
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <StatusChip status={row.status} />
-                  <ViewTrailButton actionId={row.id} />
-                </div>
-              </td>
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const isWaiting = row.status === "intercepted";
+            const flash = flashClassFor(row);
+            const rowClasses = ["hover:bg-zinc-900/60", isWaiting ? "pulse-amber" : "", flash]
+              .filter(Boolean)
+              .join(" ");
+            const display = row.display as Display;
+            return (
+              <tr key={row.id} className={rowClasses}>
+                <td className="px-4 py-3 font-mono text-xs text-zinc-500">{time(row.created_at)}</td>
+                <td className="px-4 py-3 text-zinc-300">{row.agent_name}</td>
+                <td className="px-4 py-3 font-mono text-xs text-zinc-200">
+                  <span className="inline-flex items-center gap-1.5">
+                    {row.tool_name}
+                    {display?.redacted ? (
+                      <span
+                        title="PII redacted locally — cloud LLM never saw the raw value"
+                        className="rounded border border-purple-500/40 bg-purple-500/15 px-1.5 py-0.5 text-[10px] font-medium text-purple-300"
+                      >
+                        🔒 PII
+                      </span>
+                    ) : null}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-zinc-400">{detail(row)}</td>
+                <td className="px-4 py-3">
+                  <span className={row.risk === "high" ? "text-red-400" : "text-zinc-500"}>{row.risk.toUpperCase()}</span>
+                </td>
+                <td className="px-4 py-3 text-zinc-300">{row.cost != null ? `$${Number(row.cost).toFixed(2)}` : "—"}</td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <StatusChip status={row.status} />
+                    {isWaiting ? <span className="font-mono text-xs text-amber-300">Frozen {formatElapsed(row.created_at)}</span> : null}
+                    <ViewTrailButton actionId={row.id} />
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -114,7 +148,6 @@ function ViewTrailButton({ actionId }: { actionId: string }) {
           const ev = payload.new as AuditEventRow;
           setEvents((prev) => {
             if (!prev) return [ev];
-            // avoid duplicate ids
             if (prev.find((p) => p.id === ev.id)) return prev;
             return [...prev, ev].sort((a, b) => a.created_at.localeCompare(b.created_at));
           });
@@ -133,10 +166,7 @@ function ViewTrailButton({ actionId }: { actionId: string }) {
 
   return (
     <>
-      <button
-        className="rounded bg-zinc-800/60 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
-        onClick={openModal}
-      >
+      <button className="rounded bg-zinc-800/60 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700" onClick={openModal}>
         View Trail
       </button>
 
@@ -152,10 +182,7 @@ function ViewTrailButton({ actionId }: { actionId: string }) {
                   onChange={(e) => setFilter(e.target.value)}
                   className="rounded border border-zinc-800 bg-zinc-900/50 px-2 py-1 text-xs text-zinc-200"
                 />
-                <button
-                  className="rounded bg-zinc-800/60 px-3 py-1 text-xs text-zinc-300"
-                  onClick={() => setOpen(false)}
-                >
+                <button className="rounded bg-zinc-800/60 px-3 py-1 text-xs text-zinc-300" onClick={() => setOpen(false)}>
                   Close
                 </button>
               </div>
@@ -182,9 +209,7 @@ function ViewTrailButton({ actionId }: { actionId: string }) {
                         </div>
                         <div className="text-xs text-zinc-500">v{ev.decision_version ?? "-"}</div>
                       </div>
-                      <pre className="whitespace-pre-wrap break-words text-xs text-zinc-200">
-                        {JSON.stringify(ev.payload || {}, null, 2)}
-                      </pre>
+                      <pre className="whitespace-pre-wrap break-words text-xs text-zinc-200">{JSON.stringify(ev.payload || {}, null, 2)}</pre>
                     </div>
                   ))}
             </div>
