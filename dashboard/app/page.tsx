@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import AuditTable from "@/components/AuditTable";
 import HeroStats from "@/components/HeroStats";
+import ThreatBlocked from "@/components/ThreatBlocked";
 import WhatClaudeSaw from "@/components/WhatClaudeSaw";
 import { supabase, supabaseConfigured, type ActionRow } from "@/lib/supabase";
 
@@ -54,20 +56,28 @@ export default function Home() {
             Three-layer trust system for autonomous AI agents
           </p>
         </div>
-        <span
-          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
-            live
-              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-              : "border-zinc-700 bg-zinc-800 text-zinc-400"
-          }`}
-        >
+        <div className="flex items-center gap-3">
+          <Link
+            href="/pitch"
+            className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-purple-500/40 hover:bg-purple-500/10 hover:text-purple-200"
+          >
+            View pitch →
+          </Link>
           <span
-            className={`h-2 w-2 rounded-full ${
-              live ? "bg-emerald-400" : "bg-zinc-500"
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
+              live
+                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                : "border-zinc-700 bg-zinc-800 text-zinc-400"
             }`}
-          />
-          {live ? "Live" : "Connecting…"}
-        </span>
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                live ? "bg-emerald-400" : "bg-zinc-500"
+              }`}
+            />
+            {live ? "Live" : "Connecting…"}
+          </span>
+        </div>
       </header>
 
       {!supabaseConfigured && (
@@ -80,6 +90,7 @@ export default function Home() {
       )}
 
       <HeroStats rows={rows} />
+      <ThreatBlocked rows={rows} />
       <WhatClaudeSaw rows={rows} />
       <AuditTable rows={rows} />
     </main>
