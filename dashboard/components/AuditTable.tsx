@@ -1,5 +1,7 @@
-import type { ActionRow } from "@/lib/supabase";
+import type { ActionRow, AuditEventRow } from "@/lib/supabase";
 import StatusChip from "./StatusChip";
+import { useState, useEffect } from "react";
+import { fetchAuditEvents, supabase } from "@/lib/supabase";
 
 function time(ts: string) {
   return new Date(ts).toLocaleTimeString([], {
@@ -74,12 +76,121 @@ export default function AuditTable({ rows }: { rows: ActionRow[] }) {
                 {row.cost != null ? `$${Number(row.cost).toFixed(2)}` : "—"}
               </td>
               <td className="px-4 py-3">
-                <StatusChip status={row.status} />
+                <div className="flex items-center gap-2">
+                  <StatusChip status={row.status} />
+                  <ViewTrailButton actionId={row.id} />
+                </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+function ViewTrailButton({ actionId }: { actionId: string }) {
+  const [open, setOpen] = useState(false);
+  const [events, setEvents] = useState<AuditEventRow[] | null>(null);
+  const [filter, setFilter] = useState<string>("");
+
+  async function openModal() {
+    setOpen(true);
+    if (!events) {
+      const data = await fetchAuditEvents(actionId);
+      setEvents(data as AuditEventRow[]);
+    }
+  }
+
+  useEffect(() => {
+    if (!open || !supabase) return;
+
+    const channel = supabase
+      .channel(`audit-events-${actionId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "audit_events", filter: `action_id=eq.${actionId}` },
+        (payload) => {
+          const ev = payload.new as AuditEventRow;
+          setEvents((prev) => {
+            if (!prev) return [ev];
+            // avoid duplicate ids
+            if (prev.find((p) => p.id === ev.id)) return prev;
+            return [...prev, ev].sort((a, b) => a.created_at.localeCompare(b.created_at));
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      try {
+        supabase?.removeChannel(channel as any);
+      } catch (e) {
+        // ignore
+      }
+    };
+  }, [open, actionId]);
+
+  return (
+    <>
+      <button
+        className="rounded bg-zinc-800/60 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
+        onClick={openModal}
+      >
+        View Trail
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-2xl rounded bg-zinc-950 p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-medium">Decision Trail</h3>
+              <div className="flex items-center gap-2">
+                <input
+                  placeholder="Filter by kind or actor"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="rounded border border-zinc-800 bg-zinc-900/50 px-2 py-1 text-xs text-zinc-200"
+                />
+                <button
+                  className="rounded bg-zinc-800/60 px-3 py-1 text-xs text-zinc-300"
+                  onClick={() => setOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3 max-h-[60vh] overflow-auto">
+              {!events && <div className="text-sm text-zinc-500">Loading…</div>}
+              {events &&
+                events
+                  .filter((ev) => {
+                    if (!filter) return true;
+                    const f = filter.toLowerCase();
+                    return (
+                      (ev.decision_kind || "").toLowerCase().includes(f) ||
+                      (ev.actor || "").toLowerCase().includes(f) ||
+                      (ev.event_type || "").toLowerCase().includes(f)
+                    );
+                  })
+                  .map((ev) => (
+                    <div key={ev.id} className="rounded border border-zinc-800 p-3">
+                      <div className="mb-1 flex items-center justify-between">
+                        <div className="text-sm text-zinc-400">
+                          {new Date(ev.created_at).toLocaleString()} • {ev.actor || "system"} • {ev.decision_kind || ev.event_type}
+                        </div>
+                        <div className="text-xs text-zinc-500">v{ev.decision_version ?? "-"}</div>
+                      </div>
+                      <pre className="whitespace-pre-wrap break-words text-xs text-zinc-200">
+                        {JSON.stringify(ev.payload || {}, null, 2)}
+                      </pre>
+                    </div>
+                  ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

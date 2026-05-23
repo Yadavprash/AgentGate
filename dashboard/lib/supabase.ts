@@ -34,3 +34,26 @@ export type ActionRow = {
   decided_at: string | null;
   completed_at: string | null;
 };
+
+export type AuditEventRow = {
+  id: string;
+  action_id: string;
+  event_type: string;
+  actor: string | null;
+  decision_kind: string | null;
+  decision_version: number | null;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+  prev_hash: string | null;
+  this_hash: string | null;
+};
+
+export async function fetchAuditEvents(actionId: string) {
+  if (!supabase) return [] as AuditEventRow[];
+  const { data } = await supabase
+    .from("audit_events")
+    .select("*")
+    .eq("action_id", actionId)
+    .order("created_at", { ascending: true });
+  return (data || []) as AuditEventRow[];
+}

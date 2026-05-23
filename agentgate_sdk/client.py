@@ -3,6 +3,7 @@ import os
 from typing import Any, Optional
 
 import httpx
+import time
 
 
 class ApprovalTimeoutError(Exception):
@@ -46,7 +47,7 @@ class GateClient:
             "display": display or {},
         }
         try:
-            resp = self._http.post(f"{self.base_url}/gate/intercept", json=body)
+            resp = self._post_with_retries("/gate/intercept", json=body, retries=3, backoff=0.5)
         except httpx.ReadTimeout as exc:
             raise ApprovalTimeoutError(
                 f"No human decision for '{tool_name}' in time."
@@ -60,9 +61,23 @@ class GateClient:
     def complete(self, job_id: str, status: str = "completed") -> None:
         """Best-effort report that an approved action finished running."""
         try:
-            self._http.post(
-                f"{self.base_url}/gate/complete",
-                json={"job_id": job_id, "status": status},
-            )
+            # Best-effort: try a few times on transient network errors.
+            self._post_with_retries("/gate/complete", json={"job_id": job_id, "status": status}, retries=2, backoff=0.2)
         except Exception:  # noqa: BLE001 - completion ping is non-critical
             pass
+
+    def _post_with_retries(self, path: str, json: Optional[dict] = None, retries: int = 3, backoff: float = 0.5) -> httpx.Response:
+        url = f"{self.base_url.rstrip('/')}{path}"
+        last_exc = None
+        for attempt in range(1, retries + 1):
+            try:
+                resp = self._http.post(url, json=json)
+                return resp
+            except httpx.ReadTimeout:
+                # Let callers handle read timeouts (they may indicate blocking approval wait)
+                raise
+            except Exception as exc:
+                last_exc = exc
+                if attempt == retries:
+                    raise
+                time.sleep(backoff * (2 ** (attempt - 1)))
