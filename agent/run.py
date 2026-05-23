@@ -43,9 +43,14 @@ def main() -> None:
     print(f"Goal: {goal}\n")
 
     from agent.agent import build_agent
-    from agentgate_sdk import ApprovalTimeoutError
+    from agentgate_sdk import ApprovalTimeoutError, GateClient
 
     agent = build_agent()
+    audit_client = GateClient()
+
+    def _summary(text: str) -> str:
+        s = (text or "").strip()
+        return s[:400]
 
     try:
         seen = 0
@@ -62,8 +67,23 @@ def main() -> None:
         print("\n=== Final answer ===")
         if last_message is not None:
             content = getattr(last_message, "content", "")
-            print(content if isinstance(content, str) else str(content))
+            text = content if isinstance(content, str) else str(content)
+            print(text)
+            action_id = audit_client.last_job_id()
+            if action_id:
+                audit_client.report_final_response(
+                    action_id=action_id,
+                    status="completed",
+                    summary=_summary(text),
+                )
     except ApprovalTimeoutError as exc:
+        action_id = audit_client.last_job_id()
+        if action_id:
+            audit_client.report_final_response(
+                action_id=action_id,
+                status="halted",
+                summary=_summary(str(exc)),
+            )
         print(f"\n=== Agent halted ===\nNo human responded in time: {exc}")
         sys.exit(1)
 

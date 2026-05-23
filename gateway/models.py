@@ -37,3 +37,12 @@ class RedactionRequest(BaseModel):
     raw_output: str
     redacted_output: str
     backend: str = "regex"
+
+
+class FinalResponseRequest(BaseModel):
+    """SDK reports a summarized final agent response for audit continuity."""
+
+    action_id: str
+    status: Literal["completed", "halted", "failed"] = "completed"
+    summary: str = ""
+    answer_length: int = 0

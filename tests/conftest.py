@@ -68,6 +68,7 @@ class StubGateClient:
         self.intercept_calls: list[dict] = []
         self.complete_calls: list[dict] = []
         self.redaction_calls: list[dict] = []
+        self.final_response_calls: list[dict] = []
 
     def intercept(self, tool_name, tool_args, risk="low", mode="approval", display=None):
         self.intercept_calls.append(
@@ -91,6 +92,15 @@ class StubGateClient:
                 "raw": raw,
                 "redacted": redacted,
                 "backend": backend,
+            }
+        )
+
+    def report_final_response(self, action_id, summary, status="completed"):
+        self.final_response_calls.append(
+            {
+                "action_id": action_id,
+                "summary": summary,
+                "status": status,
             }
         )
 

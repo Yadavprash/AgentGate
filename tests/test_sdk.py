@@ -145,3 +145,11 @@ def test_display_callable_receives_args(stub_client_factory):
 
     tool.invoke({"idea": "coffee"})
     assert stub.intercept_calls[0]["display"] == {"summary": "idea=coffee"}
+
+
+def test_stub_client_supports_final_response_calls(stub_client_factory):
+    stub = stub_client_factory({"job_id": "j6", "decision": "approved"})
+    stub.report_final_response("j6", "done", status="completed")
+    assert stub.final_response_calls == [
+        {"action_id": "j6", "summary": "done", "status": "completed"}
+    ]
