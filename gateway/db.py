@@ -42,3 +42,25 @@ async def update_action(job_id: str, data: dict[str, Any]) -> None:
         _get_client().table("actions").update(data).eq("id", job_id).execute()
 
     await asyncio.to_thread(_do)
+
+
+async def merge_action_display(job_id: str, additions: dict[str, Any]) -> None:
+    """Read the row's current display jsonb, merge in additions, write back.
+    Used for late-arriving fields like raw/redacted output."""
+    if not settings.supabase_enabled:
+        return
+
+    def _do() -> None:
+        client = _get_client()
+        row = (
+            client.table("actions")
+            .select("display")
+            .eq("id", job_id)
+            .limit(1)
+            .execute()
+        )
+        existing = (row.data[0].get("display") if row.data else None) or {}
+        merged = {**existing, **additions}
+        client.table("actions").update({"display": merged}).eq("id", job_id).execute()
+
+    await asyncio.to_thread(_do)

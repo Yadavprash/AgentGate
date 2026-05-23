@@ -63,6 +63,7 @@ class StubGateClient:
         self.response = dict(response)
         self.intercept_calls: list[dict] = []
         self.complete_calls: list[dict] = []
+        self.redaction_calls: list[dict] = []
 
     def intercept(self, tool_name, tool_args, risk="low", mode="approval", display=None):
         self.intercept_calls.append(
@@ -78,6 +79,16 @@ class StubGateClient:
 
     def complete(self, job_id, status="completed"):
         self.complete_calls.append({"job_id": job_id, "status": status})
+
+    def report_redaction(self, job_id, raw, redacted, backend):
+        self.redaction_calls.append(
+            {
+                "job_id": job_id,
+                "raw": raw,
+                "redacted": redacted,
+                "backend": backend,
+            }
+        )
 
 
 @pytest.fixture

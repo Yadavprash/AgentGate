@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import AuditTable from "@/components/AuditTable";
+import HeroStats from "@/components/HeroStats";
+import WhatClaudeSaw from "@/components/WhatClaudeSaw";
 import { supabase, supabaseConfigured, type ActionRow } from "@/lib/supabase";
 
 export default function Home() {
@@ -43,24 +45,13 @@ export default function Home() {
     };
   }, []);
 
-  const stats = useMemo(() => {
-    return {
-      total: rows.length,
-      intercepted: rows.filter((r) => r.status === "intercepted").length,
-      denied: rows.filter((r) => r.status === "denied").length,
-      passed: rows.filter((r) =>
-        ["auto_approved", "approved", "completed"].includes(r.status),
-      ).length,
-    };
-  }, [rows]);
-
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-10">
       <header className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-100">AgentGate</h1>
           <p className="text-sm text-zinc-500">
-            Live audit log of intercepted AI agent actions
+            Three-layer trust system for autonomous AI agents
           </p>
         </div>
         <span
@@ -88,41 +79,9 @@ export default function Home() {
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-4 gap-4">
-        <Stat label="Total actions" value={stats.total} />
-        <Stat label="Auto / approved" value={stats.passed} tone="emerald" />
-        <Stat label="Awaiting human" value={stats.intercepted} tone="amber" />
-        <Stat label="Blocked" value={stats.denied} tone="red" />
-      </div>
-
+      <HeroStats rows={rows} />
+      <WhatClaudeSaw rows={rows} />
       <AuditTable rows={rows} />
     </main>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  tone = "zinc",
-}: {
-  label: string;
-  value: number;
-  tone?: "zinc" | "emerald" | "amber" | "red";
-}) {
-  const colors: Record<string, string> = {
-    zinc: "text-zinc-100",
-    emerald: "text-emerald-300",
-    amber: "text-amber-300",
-    red: "text-red-300",
-  };
-  return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-      <div className="text-xs uppercase tracking-wide text-zinc-500">
-        {label}
-      </div>
-      <div className={`mt-1 text-2xl font-semibold ${colors[tone]}`}>
-        {value}
-      </div>
-    </div>
   );
 }

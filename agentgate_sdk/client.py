@@ -66,3 +66,23 @@ class GateClient:
             )
         except Exception:  # noqa: BLE001 - completion ping is non-critical
             pass
+
+    def report_redaction(
+        self, job_id: str, raw: str, redacted: str, backend: str
+    ) -> None:
+        """Push raw + redacted text to the gateway so the dashboard can show
+        side-by-side proof. Best-effort: failures never block the agent."""
+        if not job_id:
+            return
+        try:
+            self._http.post(
+                f"{self.base_url}/gate/redaction",
+                json={
+                    "job_id": job_id,
+                    "raw_output": raw,
+                    "redacted_output": redacted,
+                    "backend": backend,
+                },
+            )
+        except Exception:  # noqa: BLE001
+            pass

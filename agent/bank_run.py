@@ -1,8 +1,6 @@
-"""CLI entrypoint for the AgentGate demo agent.
+"""CLI entrypoint for the AgentGate 'human as tool' bank demo.
 
-    python -m agent.run 'buy a .com domain for my coffee shop under $20'
-
-Use single quotes around the prompt on bash so $20 isn't shell-expanded.
+    python -m agent.bank_run 'Log into my bank and show yesterday transactions'
 """
 import os
 import sys
@@ -11,18 +9,13 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-# `--unsafe` flag: bypass AgentGate entirely. Used on stage to show what would
-# happen without the airlock - the agent runs unprotected, no Discord cards,
-# no audit log entries, no PII redaction.
+# See agent/run.py for the --unsafe semantics.
 if "--unsafe" in sys.argv:
     os.environ["AGENTGATE_DISABLED"] = "1"
     sys.argv.remove("--unsafe")
     print(
         "\n!!! AGENTGATE BYPASSED !!!\n"
-        "    Agent will execute high-risk tools with NO human approval, "
-        "NO audit log, NO PII redaction.\n"
-        "    This is the 'before' state - what your agent does without "
-        "AgentGate.\n"
+        "    Agent will run with NO HITL, NO PII redaction, NO audit log.\n"
     )
 
 # Windows consoles default to cp1252; force UTF-8 so agent output never crashes print().
@@ -31,22 +24,18 @@ try:
 except Exception:  # noqa: BLE001
     pass
 
-DEFAULT_GOAL = (
-    "Find an available .com domain for my new coffee shop startup "
-    "under $20 and buy it."
-)
+DEFAULT_GOAL = "Log into my bank dashboard and tell me yesterday's transactions."
 
 
 def main() -> None:
     goal = " ".join(sys.argv[1:]).strip() or DEFAULT_GOAL
-    print("\n=== AgentGate demo agent ===")
+    print("\n=== AgentGate bank demo agent ===")
     print(f"Goal: {goal}\n")
 
-    from agent.agent import build_agent
+    from agent.bank_agent import build_agent
     from agentgate_sdk import ApprovalTimeoutError
 
     agent = build_agent()
-
     try:
         seen = 0
         last_message = None
