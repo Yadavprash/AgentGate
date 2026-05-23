@@ -7,4 +7,5 @@ langchain-anthropic>=0.3
 httpx>=0.27
 python-dotenv>=1.0
 pydantic>=2.9
+pyyaml>=6.0
 razorpay>=1.4

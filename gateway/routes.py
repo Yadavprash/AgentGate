@@ -5,12 +5,13 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request
 
-from gateway import db, pause
+from gateway import audit_log, db, pause
 from gateway.config import settings
 from gateway.discord_bot import bot as discord_bot
 from gateway.models import (
     CompleteRequest,
     DecisionRequest,
+    FinalResponseRequest,
     InterceptRequest,
     InterceptResponse,
     RedactionRequest,
@@ -49,10 +50,36 @@ async def intercept(req: InterceptRequest):
     # Low-risk: log as auto-approved and return immediately.
     if req.risk == "low":
         job_id = await db.insert_action({**base_row, "status": "auto_approved"})
+        await audit_log.record_event(
+            "auto_approved",
+            action_id=job_id,
+            actor="ai",
+            decision_kind="tool_call",
+            payload={
+                "agent": req.agent_name,
+                "tool": req.tool_name,
+                "risk": req.risk,
+                "sensitive": bool(req.display.get("redacted")),
+            },
+        )
         return InterceptResponse(job_id=job_id, decision="approved")
 
     # High-risk: create the job, ping Discord, then freeze the request.
     job_id = await db.insert_action({**base_row, "status": "intercepted"})
+    await audit_log.record_event(
+        "intercepted",
+        action_id=job_id,
+        actor="ai",
+        decision_kind="tool_call",
+        payload={
+            "agent": req.agent_name,
+            "tool": req.tool_name,
+            "risk": req.risk,
+            "mode": req.mode,
+            "cost": req.display.get("cost"),
+            "threat": bool(req.display.get("threat")),
+        },
+    )
     pause.register(job_id)
     asyncio.create_task(discord_bot.send_card(job_id, req))
 
@@ -60,6 +87,12 @@ async def intercept(req: InterceptRequest):
         result = await pause.wait(job_id, settings.approval_timeout)
     except asyncio.TimeoutError:
         await db.update_action(job_id, {"status": "timed_out", "decided_at": _now()})
+        await audit_log.record_event(
+            "timed_out",
+            action_id=job_id,
+            actor="system",
+            decision_kind="approval",
+        )
         raise HTTPException(status_code=408, detail="approval timed out")
     finally:
         pause.cleanup(job_id)
@@ -69,6 +102,13 @@ async def intercept(req: InterceptRequest):
     await db.update_action(
         job_id,
         {"status": decision, "decision_payload": payload, "decided_at": _now()},
+    )
+    decision_kind = "input" if req.mode == "input" else "approval"
+    await audit_log.record_event(
+        decision,
+        action_id=job_id,
+        actor="human",
+        decision_kind=decision_kind,
     )
     return InterceptResponse(job_id=job_id, decision=decision, payload=payload)
 
@@ -118,6 +158,12 @@ async def complete(req: CompleteRequest):
     await db.update_action(
         req.job_id, {"status": req.status, "completed_at": _now()}
     )
+    await audit_log.record_event(
+        req.status,
+        action_id=req.job_id,
+        actor="system",
+        decision_kind="completion",
+    )
     return {"ok": True}
 
 
@@ -131,6 +177,35 @@ async def redaction(req: RedactionRequest):
             "raw_output": req.raw_output,
             "redacted_output": req.redacted_output,
             "redaction_backend": req.backend,
+        },
+    )
+    # Audit chain records only sanitized metadata - no raw PII in the log.
+    await audit_log.record_event(
+        "redaction",
+        action_id=req.job_id,
+        actor="system",
+        decision_kind="redaction",
+        payload={
+            "backend": req.backend,
+            "raw_length": len(req.raw_output),
+            "redacted_length": len(req.redacted_output),
+        },
+    )
+    return {"ok": True}
+
+
+@router.post("/gate/final_response")
+async def final_response(req: FinalResponseRequest):
+    """SDK reports the final agent output decision as an audit event."""
+    await audit_log.record_event(
+        "final_response",
+        action_id=req.action_id,
+        actor="ai",
+        decision_kind="final_response",
+        payload={
+            "status": req.status,
+            "summary": req.summary,
+            "answer_length": req.answer_length,
         },
     )
     return {"ok": True}

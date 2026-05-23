@@ -58,3 +58,29 @@ body {
 .flash-red {
   animation: flash-red 2s ease-out 1;
 }
+
+/* THREAT BLOCKED banner pulse - heavy red glow */
+@keyframes threat-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55), 0 0 14px 0 rgba(239, 68, 68, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18), 0 0 32px 6px rgba(239, 68, 68, 0.45);
+  }
+}
+.threat-pulse {
+  animation: threat-pulse 1.6s ease-in-out infinite;
+}
+
+/* Amber variant for the "still awaiting human" state */
+@keyframes threat-pulse-amber {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55), 0 0 14px 0 rgba(245, 158, 11, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18), 0 0 32px 6px rgba(245, 158, 11, 0.45);
+  }
+}
+.threat-pulse-amber {
+  animation: threat-pulse-amber 1.6s ease-in-out infinite;
+}

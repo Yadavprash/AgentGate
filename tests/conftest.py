@@ -6,6 +6,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport
 
+from agentgate_sdk import policy
 from gateway import pause
 from gateway.config import settings
 from gateway.discord_bot import bot as discord_bot
@@ -23,6 +24,9 @@ def disable_external(monkeypatch):
     monkeypatch.setenv("RAZORPAY_KEY_ID", "")
     monkeypatch.setenv("RAZORPAY_KEY_SECRET", "")
     monkeypatch.setenv("LOCAL_LLM_URL", "")
+    # Drop the cached risk-policy so each test gets a fresh lookup based on
+    # whatever env / files it sets up.
+    policy.reload()
 
 
 @pytest.fixture(autouse=True)
@@ -64,6 +68,7 @@ class StubGateClient:
         self.intercept_calls: list[dict] = []
         self.complete_calls: list[dict] = []
         self.redaction_calls: list[dict] = []
+        self.final_response_calls: list[dict] = []
 
     def intercept(self, tool_name, tool_args, risk="low", mode="approval", display=None):
         self.intercept_calls.append(
@@ -87,6 +92,15 @@ class StubGateClient:
                 "raw": raw,
                 "redacted": redacted,
                 "backend": backend,
+            }
+        )
+
+    def report_final_response(self, action_id, summary, status="completed"):
+        self.final_response_calls.append(
+            {
+                "action_id": action_id,
+                "summary": summary,
+                "status": status,
             }
         )
 

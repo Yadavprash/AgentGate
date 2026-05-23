@@ -19,6 +19,29 @@ export type ActionStatus =
   | "timed_out"
   | "failed";
 
+export type AuditEventType =
+  | "intercepted"
+  | "auto_approved"
+  | "approved"
+  | "denied"
+  | "timed_out"
+  | "completed"
+  | "failed"
+  | "redaction"
+  | "threat"
+  | "final_response";
+
+export type DecisionActor = "ai" | "human" | "system";
+
+export type DecisionKind =
+  | "tool_call"
+  | "approval"
+  | "input"
+  | "final_response"
+  | "completion"
+  | "redaction"
+  | "threat";
+
 export type ActionRow = {
   id: string;
   agent_id: string;
@@ -33,4 +56,16 @@ export type ActionRow = {
   created_at: string;
   decided_at: string | null;
   completed_at: string | null;
+};
+
+export type AuditEventRow = {
+  id: string;
+  seq: number;
+  action_id: string | null;
+  event_type: AuditEventType;
+  actor: DecisionActor;
+  decision_kind: DecisionKind;
+  decision_version: number;
+  payload: Record<string, unknown>;
+  created_at: string;
 };

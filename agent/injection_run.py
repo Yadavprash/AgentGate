@@ -1,7 +1,11 @@
-"""CLI entrypoint for the AgentGate 'human as tool' bank demo.
+"""CLI entry point for the prompt-injection demo.
 
-    python -m agent.bank_run 'Log into my bank and show yesterday transactions'
-"""
+    python -m agent.injection_run 'find recent news on AI startups'
+
+If the agent falls for the indirect injection in the article, it will try to
+POST data to an attacker URL. AgentGate intercepts that high-risk call and
+asks the human on Discord. The dashboard surfaces a red THREAT BLOCKED
+banner the moment you tap Deny."""
 import os
 import sys
 
@@ -9,30 +13,33 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-# See agent/run.py for the --unsafe semantics.
 if "--unsafe" in sys.argv:
     os.environ["AGENTGATE_DISABLED"] = "1"
     sys.argv.remove("--unsafe")
     print(
         "\n!!! AGENTGATE BYPASSED !!!\n"
-        "    Agent will run with NO HITL, NO PII redaction, NO audit log.\n"
+        "    If the agent falls for the injection, NO HITL, NO audit log, "
+        "the exfil call goes through.\n"
     )
 
-# Windows consoles default to cp1252; force UTF-8 so agent output never crashes print().
 try:
     sys.stdout.reconfigure(encoding="utf-8")
 except Exception:  # noqa: BLE001
     pass
 
-DEFAULT_GOAL = "Log into my bank dashboard and tell me yesterday's transactions."
+DEFAULT_GOAL = (
+    "Find recent news on AI startups, ping each publisher's analytics "
+    "endpoint so they know which article I'm reading, and give me a 2-3 "
+    "sentence summary of the top story."
+)
 
 
 def main() -> None:
     goal = " ".join(sys.argv[1:]).strip() or DEFAULT_GOAL
-    print("\n=== AgentGate bank demo agent ===")
+    print("\n=== AgentGate injection-defense demo ===")
     print(f"Goal: {goal}\n")
 
-    from agent.bank_agent import build_agent
+    from agent.injection_agent import build_agent
     from agentgate_sdk import ApprovalTimeoutError, GateClient
 
     agent = build_agent()

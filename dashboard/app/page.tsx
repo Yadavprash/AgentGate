@@ -1,13 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import AuditTable from "@/components/AuditTable";
+import DecisionTable from "@/components/DecisionTable";
 import HeroStats from "@/components/HeroStats";
+import ThreatBlocked from "@/components/ThreatBlocked";
 import WhatClaudeSaw from "@/components/WhatClaudeSaw";
-import { supabase, supabaseConfigured, type ActionRow } from "@/lib/supabase";
+import {
+  supabase,
+  supabaseConfigured,
+  type ActionRow,
+  type AuditEventRow,
+} from "@/lib/supabase";
 
 export default function Home() {
   const [rows, setRows] = useState<ActionRow[]>([]);
+  const [decisionRows, setDecisionRows] = useState<AuditEventRow[]>([]);
   const [live, setLive] = useState(false);
 
   useEffect(() => {
@@ -23,7 +32,16 @@ export default function Home() {
         if (data) setRows(data as ActionRow[]);
       });
 
-    const channel = sb
+    sb
+      .from("audit_events")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200)
+      .then(({ data }) => {
+        if (data) setDecisionRows(data as AuditEventRow[]);
+      });
+
+    const actionsChannel = sb
       .channel("actions-feed")
       .on(
         "postgres_changes",
@@ -40,8 +58,26 @@ export default function Home() {
       )
       .subscribe((status) => setLive(status === "SUBSCRIBED"));
 
+    const decisionsChannel = sb
+      .channel("audit-events-feed")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "audit_events" },
+        (payload) => {
+          const row = payload.new as AuditEventRow;
+          if (!row?.id) return;
+          setDecisionRows((prev) =>
+            [row, ...prev.filter((r) => r.id !== row.id)]
+              .sort((a, b) => b.created_at.localeCompare(a.created_at))
+              .slice(0, 200),
+          );
+        },
+      )
+      .subscribe();
+
     return () => {
-      sb.removeChannel(channel);
+      sb.removeChannel(actionsChannel);
+      sb.removeChannel(decisionsChannel);
     };
   }, []);
 
@@ -54,20 +90,28 @@ export default function Home() {
             Three-layer trust system for autonomous AI agents
           </p>
         </div>
-        <span
-          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
-            live
-              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-              : "border-zinc-700 bg-zinc-800 text-zinc-400"
-          }`}
-        >
+        <div className="flex items-center gap-3">
+          <Link
+            href="/pitch"
+            className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-purple-500/40 hover:bg-purple-500/10 hover:text-purple-200"
+          >
+            View pitch →
+          </Link>
           <span
-            className={`h-2 w-2 rounded-full ${
-              live ? "bg-emerald-400" : "bg-zinc-500"
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
+              live
+                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                : "border-zinc-700 bg-zinc-800 text-zinc-400"
             }`}
-          />
-          {live ? "Live" : "Connecting…"}
-        </span>
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                live ? "bg-emerald-400" : "bg-zinc-500"
+              }`}
+            />
+            {live ? "Live" : "Connecting…"}
+          </span>
+        </div>
       </header>
 
       {!supabaseConfigured && (
@@ -80,8 +124,10 @@ export default function Home() {
       )}
 
       <HeroStats rows={rows} />
+      <ThreatBlocked rows={rows} />
       <WhatClaudeSaw rows={rows} />
       <AuditTable rows={rows} />
+      <DecisionTable rows={decisionRows} />
     </main>
   );
 }

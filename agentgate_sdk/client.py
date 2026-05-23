@@ -10,6 +10,8 @@ class ApprovalTimeoutError(Exception):
 
 
 class GateClient:
+    _last_job_by_agent: dict[str, str] = {}
+
     def __init__(
         self,
         base_url: Optional[str] = None,
@@ -55,7 +57,11 @@ class GateClient:
         if resp.status_code == 408:
             raise ApprovalTimeoutError(f"Approval for '{tool_name}' timed out.")
         resp.raise_for_status()
-        return resp.json()
+        result = resp.json()
+        job_id = result.get("job_id")
+        if isinstance(job_id, str) and job_id:
+            GateClient._last_job_by_agent[self.agent_id] = job_id
+        return result
 
     def complete(self, job_id: str, status: str = "completed") -> None:
         """Best-effort report that an approved action finished running."""
@@ -82,6 +88,33 @@ class GateClient:
                     "raw_output": raw,
                     "redacted_output": redacted,
                     "backend": backend,
+                },
+            )
+        except Exception:  # noqa: BLE001
+            pass
+
+    def last_job_id(self) -> Optional[str]:
+        """Return the latest intercepted action id for this agent id."""
+        return GateClient._last_job_by_agent.get(self.agent_id)
+
+    def report_final_response(
+        self,
+        action_id: str,
+        summary: str,
+        status: str = "completed",
+    ) -> None:
+        """Push final agent response metadata into the audit trail.
+        Best-effort: failures never block the agent process."""
+        if not action_id:
+            return
+        try:
+            self._http.post(
+                f"{self.base_url}/gate/final_response",
+                json={
+                    "action_id": action_id,
+                    "status": status,
+                    "summary": summary,
+                    "answer_length": len(summary or ""),
                 },
             )
         except Exception:  # noqa: BLE001
