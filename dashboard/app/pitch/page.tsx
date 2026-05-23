@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 export default function PitchPage() {
   return (
     <main className="mx-auto w-full max-w-4xl px-6 py-10">
@@ -7,3 +6,4 @@ export default function PitchPage() {
     </main>
   );
 }
+
