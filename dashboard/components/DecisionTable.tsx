@@ -12,7 +12,7 @@ function time(ts: string) {
   });
 }
 
-function actorClass(actor: DecisionActor): string {
+function actorClass(actor: DecisionActor | null): string {
   if (actor === "human") return "text-amber-300";
   if (actor === "ai") return "text-sky-300";
   return "text-zinc-300";
