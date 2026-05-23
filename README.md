@@ -159,6 +159,34 @@ tools = [
 That's it. The same `gate()` works with any framework that consumes LangChain
 tools (CrewAI, OpenAI Agents SDK, your custom orchestrator).
 
+### Policy belongs to security teams, not agent code
+
+Drop a `risk-policies.yaml` at the repo root and the SDK treats *that* as the
+source of truth — security teams own risk classification via PR review, and
+developers just write `gate(my_tool)` and pick up the right policy
+automatically:
+
+```yaml
+# risk-policies.yaml
+defaults:
+  risk: low
+  sensitive: false
+tools:
+  execute_purchase:
+    risk: high
+    mode: approval
+  read_transactions:
+    risk: low
+    sensitive: true     # routes through the local PII redactor
+  post_to_url:
+    risk: high
+    mode: approval
+```
+
+Entries here override `risk=` / `mode=` / `sensitive=` passed to `gate()` in
+agent code. Override the file path via `AGENTGATE_POLICY_FILE`. Tools not
+listed fall through to whatever the developer's `gate()` call said.
+
 ---
 
 ## Tests

@@ -6,6 +6,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport
 
+from agentgate_sdk import policy
 from gateway import pause
 from gateway.config import settings
 from gateway.discord_bot import bot as discord_bot
@@ -23,6 +24,9 @@ def disable_external(monkeypatch):
     monkeypatch.setenv("RAZORPAY_KEY_ID", "")
     monkeypatch.setenv("RAZORPAY_KEY_SECRET", "")
     monkeypatch.setenv("LOCAL_LLM_URL", "")
+    # Drop the cached risk-policy so each test gets a fresh lookup based on
+    # whatever env / files it sets up.
+    policy.reload()
 
 
 @pytest.fixture(autouse=True)

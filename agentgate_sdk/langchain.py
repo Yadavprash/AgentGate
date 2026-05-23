@@ -12,6 +12,7 @@ from typing import Any, Callable, Optional
 
 from langchain_core.tools import StructuredTool
 
+from agentgate_sdk import policy
 from agentgate_sdk.client import GateClient
 from agentgate_sdk.redactor import redact as _redact
 
@@ -57,6 +58,15 @@ def gate(
         return StructuredTool.from_function(
             func=func, name=tool_name, description=tool_desc
         )
+
+    # Optional risk-policy override. If risk-policies.yaml lists this tool, the
+    # YAML wins - security teams own policy in version control, developers just
+    # call gate(my_tool) and pick up the right risk/mode/sensitive flags.
+    pol = policy.policy_for(tool_name)
+    if pol:
+        risk = pol.get("risk", risk)
+        mode = pol.get("mode", mode)
+        sensitive = pol.get("sensitive", sensitive)
 
     gate_client = client or _client()
 

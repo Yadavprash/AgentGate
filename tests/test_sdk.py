@@ -101,6 +101,37 @@ def test_sensitive_redacts_output_and_args(stub_client_factory, monkeypatch):
     assert sent["display"].get("redacted") is True
 
 
+def test_policy_yaml_overrides_gate_args(stub_client_factory, tmp_path, monkeypatch):
+    """risk-policies.yaml is the source of truth - its entries OVERRIDE
+    whatever the developer passed to gate()."""
+    from agentgate_sdk import policy
+
+    policy_file = tmp_path / "risk-policies.yaml"
+    policy_file.write_text(
+        "tools:\n"
+        "  policy_pinned_tool:\n"
+        "    risk: high\n"
+        "    mode: approval\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AGENTGATE_POLICY_FILE", str(policy_file))
+    policy.reload()
+
+    stub = stub_client_factory({"job_id": "jp", "decision": "approved"})
+
+    def _impl(thing: str) -> str:
+        """A function the developer mistakenly marked low-risk."""
+        return f"ran with {thing}"
+
+    # Developer passes risk='low' - policy file should override to 'high'.
+    tool = gate(_impl, risk="low", name="policy_pinned_tool", client=stub)
+    tool.invoke({"thing": "x"})
+
+    sent = stub.intercept_calls[0]
+    assert sent["risk"] == "high", "policy file should have overridden risk=low"
+    assert sent["mode"] == "approval"
+
+
 def test_display_callable_receives_args(stub_client_factory):
     stub = stub_client_factory({"job_id": "j5", "decision": "approved"})
     tool = gate(
