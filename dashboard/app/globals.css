@@ -24,3 +24,37 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Audit-table animations */
+
+@keyframes pulse-amber {
+  0%, 100% {
+    background-color: rgba(245, 158, 11, 0.06);
+    box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.9);
+  }
+  50% {
+    background-color: rgba(245, 158, 11, 0.18);
+    box-shadow: inset 3px 0 0 rgba(245, 158, 11, 1), 0 0 12px 0 rgba(245, 158, 11, 0.25);
+  }
+}
+.pulse-amber {
+  animation: pulse-amber 1.5s ease-in-out infinite;
+}
+
+@keyframes flash-green {
+  0%   { background-color: rgba(16, 185, 129, 0); }
+  20%  { background-color: rgba(16, 185, 129, 0.30); }
+  100% { background-color: rgba(16, 185, 129, 0); }
+}
+.flash-green {
+  animation: flash-green 2s ease-out 1;
+}
+
+@keyframes flash-red {
+  0%   { background-color: rgba(239, 68, 68, 0); }
+  20%  { background-color: rgba(239, 68, 68, 0.30); }
+  100% { background-color: rgba(239, 68, 68, 0); }
+}
+.flash-red {
+  animation: flash-red 2s ease-out 1;
+}

@@ -13,6 +13,7 @@ from gateway.models import (
     DecisionRequest,
     InterceptRequest,
     InterceptResponse,
+    RedactionRequest,
 )
 
 router = APIRouter()
@@ -116,5 +117,20 @@ async def complete(req: CompleteRequest):
     """The SDK reports here once an approved action has actually run."""
     await db.update_action(
         req.job_id, {"status": req.status, "completed_at": _now()}
+    )
+    return {"ok": True}
+
+
+@router.post("/gate/redaction")
+async def redaction(req: RedactionRequest):
+    """SDK pushes the local redactor's input/output here so the dashboard can
+    show a side-by-side "what was on the device" vs "what the cloud LLM saw"."""
+    await db.merge_action_display(
+        req.job_id,
+        {
+            "raw_output": req.raw_output,
+            "redacted_output": req.redacted_output,
+            "redaction_backend": req.backend,
+        },
     )
     return {"ok": True}

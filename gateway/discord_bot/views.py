@@ -90,23 +90,32 @@ class ApprovalView(discord.ui.View):
 
 
 class CaptchaModal(discord.ui.Modal):
-    """Collects the human's CAPTCHA answer and feeds it back to the agent."""
+    """Generic INPUT-mode modal. Title / field label / placeholder are all
+    overridable so the same component handles CAPTCHA, OTP, security questions, etc."""
 
-    answer = discord.ui.TextInput(
-        label="CAPTCHA text",
-        placeholder="Type the characters you see in the image",
-        required=True,
-        max_length=64,
-    )
-
-    def __init__(self, job_id: str, message: discord.Message):
-        super().__init__(title="Solve the CAPTCHA")
+    def __init__(
+        self,
+        job_id: str,
+        message: discord.Message,
+        title: str = "Solve the CAPTCHA",
+        input_label: str = "CAPTCHA text",
+        input_placeholder: str = "Type the characters you see in the image",
+        max_length: int = 64,
+    ):
+        super().__init__(title=title)
         self.job_id = job_id
         self.message = message
+        self._answer = discord.ui.TextInput(
+            label=input_label,
+            placeholder=input_placeholder,
+            required=True,
+            max_length=max_length,
+        )
+        self.add_item(self._answer)
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        value = str(self.answer.value)
+        value = str(self._answer.value)
         pause.resolve(
             self.job_id,
             {"decision": "approved", "payload": {"answer": value}},
@@ -119,16 +128,32 @@ class CaptchaModal(discord.ui.Modal):
 
 
 class CaptchaView(discord.ui.View):
-    """INPUT mode — a button that opens a modal for the human-supplied value."""
+    """INPUT mode - a button that opens a modal for the human-supplied value.
+    Button label and modal text are parameterized per intercept (CAPTCHA vs OTP etc.)."""
 
-    def __init__(self, job_id: str):
+    def __init__(
+        self,
+        job_id: str,
+        button_label: str = "Solve CAPTCHA",
+        modal_kwargs: dict | None = None,
+    ):
         super().__init__(timeout=settings.approval_timeout)
         self.job_id = job_id
+        self.modal_kwargs = modal_kwargs or {}
+        # The class-decorator button is bound at class load time with the
+        # default label. Override it on the live instance.
+        for child in self.children:
+            if (
+                isinstance(child, discord.ui.Button)
+                and getattr(child, "label", None) == "Solve CAPTCHA"
+            ):
+                child.label = button_label
+                break
 
     @discord.ui.button(label="Solve CAPTCHA", style=discord.ButtonStyle.primary, emoji="\U0001f513")
     async def solve(self, interaction: discord.Interaction, _: discord.ui.Button):
         await interaction.response.send_modal(
-            CaptchaModal(self.job_id, interaction.message)
+            CaptchaModal(self.job_id, interaction.message, **self.modal_kwargs)
         )
 
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.danger, emoji="✋")
