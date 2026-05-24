@@ -1,25 +1,30 @@
 # Python
 __pycache__/
 *.py[cod]
+*.pyo
 .venv/
 venv/
 *.egg-info/
 .pytest_cache/
 
-# Env
+# Build output
+dist/
+build/
+
+# Env — never commit real secrets
 .env
 .env.local
+.env.*.local
+dashboard/.env.local
 
 # Node / Next.js
 node_modules/
 dashboard/.next/
 dashboard/out/
-dashboard/.env.local
+.next/
 
 # OS / IDE
 .DS_Store
+Thumbs.db
 .idea/
 .vscode/
-
-
-.next/

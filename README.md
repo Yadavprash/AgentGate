@@ -1,52 +1,257 @@
-# AgentGate
+# Bastion Gate
 
 **The airlock for autonomous AI agents.**
 
-The second your AI agent tries to do something risky — spend money, send a
-message, touch private data — AgentGate freezes it mid-execution, pings a human
-on Discord with an interactive card, and resumes the agent the instant they tap
-Approve. Sensitive data is stripped on the device before the cloud LLM ever
-sees it. Every decision streams to a real-time audit log.
-
-> *In July 2025, Replit's autonomous coding AI deleted a customer's production
-> database. The CEO publicly apologized. **AgentGate is the one line of code that
-> would have stopped that.***
-
----
-
-## Three layers of trust, one line of code
+The moment your AI agent tries to do something risky — spend money, send an email, touch private data — Bastion Gate freezes it mid-execution, notifies a human on Discord, and resumes the agent the instant they approve. Sensitive data is stripped on-device before the cloud LLM ever sees it. Every decision is written to a tamper-evident audit chain.
 
 ```python
-@gate(my_tool, risk="high", sensitive=True)
+from bastion_sdk import gate
+
+purchase = gate(execute_purchase, risk="high")      # human approves before it runs
+record   = gate(fetch_patient_record, sensitive=True)  # PII redacted locally
+search   = gate(search_web, risk="low")             # auto-approved, still audited
 ```
-
-1. **PII never leaves the device.** Tools marked `sensitive=True` route through a
-   local redactor (deterministic regex by default, optional Ollama backend for
-   semantic redaction). Names, addresses, card numbers, OTP codes — stripped on
-   your laptop before any cloud LLM call.
-2. **Risky actions wait for a human.** Tools marked `risk="high"` freeze at the
-   gateway. A rich card lands on Discord in ~2 seconds. One tap to Approve,
-   Deny, or **Modify Budget** (reuses the modal infra to redirect the agent
-   with a new constraint).
-3. **Every action is auditable.** Auto-passed reads, intercepted writes,
-   denials, redactions, threats blocked — all streamed live to a Postgres-backed
-   Next.js dashboard with status chips, threat banners, and side-by-side
-   privacy proof.
-
-Architecture diagrams live in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
 
-## Four demos in one repo
+## Table of contents
 
-| Command | What it shows |
-|---------|---------------|
-| `python -m agent.run` | **Domain buying.** APPROVAL + INPUT (CAPTCHA) + Modify Budget + real Razorpay test charge. |
-| `python -m agent.bank_run` | **Bank login.** INPUT × 2 (CAPTCHA + OTP) + `sensitive` × 2 (credentials + transactions). The *WhatClaudeSaw* dashboard panel proves PII never leaves the device. |
-| `python -m agent.injection_run` | **Prompt-injection defense.** Agent reads an article with a hidden indirect-injection, gets hijacked, tries to POST to an attacker URL. AgentGate intercepts at the tool layer; the dashboard pulses red with `🚨 THREAT BLOCKED`. |
-| `python -m agent.run --unsafe` | **The "before" shot.** Runs the same agent with AgentGate disabled — no audit log row, no Discord card, raw PII goes straight to Anthropic's API, real Razorpay charge happens silently. Use to set up the contrast on stage. |
+- [How it works](#how-it-works)
+- [Install](#install)
+- [Quick start](#quick-start)
+- [Environment variables](#environment-variables)
+- [Policy file](#policy-file)
+- [Dashboard](#dashboard)
+- [Docker deployment](#docker-deployment)
+- [Architecture](#architecture)
+- [License](#license)
 
-Full presentation-day playbook in [`DEMO.md`](DEMO.md).
+---
+
+## How it works
+
+Three layers, one decorator:
+
+1. **PII never leaves the device.** Tools marked `sensitive=True` route through a local redactor (regex by default, optional Ollama backend for semantic redaction). Names, addresses, card numbers, OTP codes — stripped on your machine before any cloud API call.
+
+2. **Risky actions wait for a human.** Tools marked `risk="high"` are held at the gateway. A card lands on Discord in ~2 seconds with Approve / Deny buttons. The agent is frozen until a human decides.
+
+3. **Every action is auditable.** Auto-approved reads, intercepted writes, denials, redactions, threats blocked — all written to a SHA-256 hash chain in Supabase and streamed live to the dashboard.
+
+---
+
+## Install
+
+```bash
+pip install bastion-gate
+```
+
+The gateway and dashboard require additional setup — see [Docker deployment](#docker-deployment) for the fastest path.
+
+---
+
+## Quick start
+
+### 1. Start the gateway
+
+```bash
+# with Docker (recommended)
+docker compose up
+
+# or manually
+pip install "bastion-gate[gateway]"
+uvicorn gateway.main:app --port 8000
+```
+
+### 2. Set your API key
+
+```bash
+export BASTION_API_KEY=your-api-key
+export BASTION_GATEWAY_URL=http://localhost:8000   # default
+```
+
+### 3. Wrap your tools
+
+```python
+from bastion_sdk import gate
+
+def execute_payment(amount: float, to: str) -> str:
+    """Transfer funds."""
+    ...
+
+def fetch_patient_record(patient_id: int) -> str:
+    """Return raw EHR data including name, DOB, diagnoses."""
+    ...
+
+def search_web(query: str) -> str:
+    """Search the web."""
+    ...
+
+# high-risk: freezes until a human approves on Discord
+payment = gate(execute_payment, risk="high", mode="approval",
+               display=lambda kw: {"amount": kw["amount"], "to": kw["to"]})
+
+# sensitive: PII stripped locally before the LLM sees the output
+records = gate(fetch_patient_record, sensitive=True)
+
+# low-risk: auto-approved but still logged
+search  = gate(search_web, risk="low")
+
+# Pass to any LangChain-compatible agent
+tools = [payment, records, search]
+```
+
+`gate()` returns a `StructuredTool` — drop it into LangChain, CrewAI, the OpenAI Agents SDK, or any framework that consumes LangChain tools.
+
+---
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `BASTION_API_KEY` | — | API key (required). Generate with `bastion keygen`. |
+| `BASTION_GATEWAY_URL` | `http://localhost:8000` | Gateway endpoint. |
+| `BASTION_AGENT_ID` | `default-agent` | Identifies this agent in the audit log. |
+| `BASTION_AGENT_VERSION` | — | Optional version tag shown in the dashboard. |
+| `BASTION_FALLBACK_ON_DOWN` | `deny` | What to do if the gateway is unreachable: `deny`, `allow`, or `raise`. |
+| `BASTION_GATEWAY_TIMEOUT` | `5` | Connection timeout in seconds. |
+| `BASTION_GATEWAY_RETRIES` | `3` | Retry attempts on transient failures. |
+| `BASTION_REDACTOR` | `regex` | PII redaction backend: `regex`, `ollama`, or `custom`. |
+| `OLLAMA_ENDPOINT` | — | Required when `BASTION_REDACTOR=ollama`. |
+| `OLLAMA_MODEL` | `llama3.2` | Model used for semantic redaction. |
+| `BASTION_DISABLED` | `0` | Set to `1` to disable all gating (e.g. in tests). |
+| `BASTION_POLICY_FILE` | — | Explicit path to `bastion-policy.yaml`. Overrides auto-discovery. |
+
+---
+
+## Policy file
+
+Security teams own risk classification — agent developers just call `gate(my_tool)`.
+
+Drop a `bastion-policy.yaml` at the project root. The SDK discovers it automatically (walks up from CWD) or reads `BASTION_POLICY_FILE`. Policy entries override whatever `risk=`, `mode=`, or `sensitive=` the developer passed to `gate()`.
+
+```yaml
+# bastion-policy.yaml
+version: 1
+
+defaults:
+  risk: low
+  sensitive: false
+  mode: approval
+
+notifications:
+  channel: slack
+  webhook_url: https://hooks.slack.com/...
+
+tools:
+  execute_payment:
+    risk: high
+    mode: approval
+
+  fetch_patient_record:
+    sensitive: true        # PII redacted locally
+
+  delete_record:
+    risk: high
+    sensitive: true
+
+  search_web:
+    risk: low
+    mode: monitor
+```
+
+Validate with the CLI:
+
+```bash
+bastion validate-policy
+```
+
+---
+
+## Dashboard
+
+A real-time Next.js dashboard streams every gate event from Supabase.
+
+![Dashboard showing live action feed, threat banner, and decision trail](https://raw.githubusercontent.com/Yadavprash/AgentGate/main/docs/dashboard-preview.png)
+
+**Pages:**
+| Page | What it shows |
+|---|---|
+| **Dashboard** | Live action feed, hero stats, threat banners, decision trail, actor breakdown |
+| **Policies** | Edit and save `bastion-policy.yaml` directly from the browser |
+| **Audit** | Export compliance reports — CSV, JSON, or text — filtered by date range |
+| **Settings** | API keys, notification channels, PII redaction backend, team access, gateway config |
+
+### Run the dashboard
+
+```bash
+cd dashboard
+cp .env.local.example .env.local   # fill in Supabase keys
+npm install
+npm run dev
+# → http://localhost:3000
+```
+
+Required in `dashboard/.env.local`:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+```
+
+---
+
+## Docker deployment
+
+### For users — no source code needed
+
+Create a `.env` file (see `.env.example`) and a `dashboard/.env.local`, then:
+
+```bash
+docker compose up
+```
+
+This pulls the published `bastion-gateway` image from Docker Hub and starts both the gateway (port 8000) and the dashboard (port 3000).
+
+### For contributors — build from source
+
+```bash
+docker compose -f docker-compose.dev.yml up
+```
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   Your AI Agent                     │
+│                                                     │
+│   tools = [gate(buy), gate(search), gate(fetch)]   │
+└────────────────────────┬────────────────────────────┘
+                         │  gate() intercepts tool call
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│              bastion_sdk  (on your machine)         │
+│                                                     │
+│  sensitive=True → local PII redactor strips first   │
+│  risk="high"    → POST /gate/intercept (held open)  │
+│  risk="low"     → POST /gate/intercept (instant)    │
+└────────────────────────┬────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│              Gateway  (FastAPI + Discord bot)        │
+│                                                     │
+│  low-risk  → auto-approve → write audit event       │
+│  high-risk → freeze → Discord card → wait for human │
+│              Approve / Deny / Modify Budget         │
+│                                                     │
+│  All events → Supabase (hash chain) → Dashboard     │
+└─────────────────────────────────────────────────────┘
+```
+
+Full sequence diagrams in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
 
@@ -54,324 +259,68 @@ Full presentation-day playbook in [`DEMO.md`](DEMO.md).
 
 ```
 AgentGate/
-├── gateway/                 FastAPI gateway + discord.py bot (one process)
-│   ├── main.py              app + lifespan (bot starts in here)
-│   ├── routes.py            /gate/intercept, /gate/decision, /gate/complete,
-│   │                        /gate/redaction, /healthz
-│   ├── pause.py             in-process asyncio.Event registry — what freezes
-│   │                        the held HTTP request
-│   ├── db.py                Supabase actions-table writes
-│   └── discord_bot/         bot + Discord cards (Approve / Deny / Modify
-│                            Budget) + INPUT-mode modal (CAPTCHA / OTP)
+├── bastion_sdk/             Python SDK — pip install bastion-gate
+│   ├── gate.py              gate() decorator
+│   ├── client.py            HTTP client (long read timeout for held calls)
+│   ├── policy.py            bastion-policy.yaml loader
+│   ├── config.py            env-var configuration
+│   ├── exceptions.py        ApprovalTimeoutError, DeniedError, etc.
+│   └── redactor/            local PII redaction (regex + Ollama)
 │
-├── agentgate_sdk/           one-line tool wrapper for any LangChain agent
-│   ├── langchain.py         gate(func, risk=, mode=, sensitive=, ...)
-│   ├── client.py            HTTP client (long read timeout for the held call)
-│   └── redactor.py          local PII redactor — regex + optional Ollama
+├── gateway/                 FastAPI gateway + Discord bot (self-hostable)
+│   ├── main.py              app entry point
+│   ├── routes.py            /gate/intercept, /gate/decision, /gate/complete
+│   ├── pause.py             asyncio.Event registry — what freezes the request
+│   ├── db.py                Supabase writes
+│   ├── audit_log.py         SHA-256 hash chain
+│   └── discord_bot/         Approve / Deny / Modify Budget cards
 │
-├── agent/                   four demo agents (see table above)
+├── dashboard/               Next.js 16 + Tailwind v4
+│   ├── app/page.tsx         live dashboard
+│   ├── app/policies/        policy editor
+│   ├── app/audit/           compliance exports
+│   └── app/settings/        API keys, team, gateway config
 │
-├── dashboard/               Next.js 14 + Tailwind, Supabase Realtime
-│   ├── app/page.tsx         live audit log
-│   ├── app/pitch/page.tsx   one-page pitch + live counters
-│   └── components/          HeroStats, ThreatBlocked, WhatClaudeSaw,
-│                            AuditTable, StatusChip
+├── .github/workflows/
+│   └── release.yml          auto-publish to PyPI + Docker Hub on git tag
 │
-├── supabase/schema.sql      actions table + realtime publication + RLS
-├── tests/                   32 automated tests
-├── DEMO.md                  presentation runbook for all four scenarios
-├── ARCHITECTURE.md          diagrams + sequence views
-├── docker-compose.yml       one-command startup
-└── Dockerfile
+├── Dockerfile
+├── docker-compose.yml       production (pulls Docker Hub image)
+├── docker-compose.dev.yml   development (builds from source)
+├── pyproject.toml
+└── bastion-policy.yaml      default policy (edit via dashboard or directly)
 ```
 
 ---
 
-## Setting up the repo
-
-The fastest path is `docker compose up` — it skips every Python and Node version issue below. Use the manual setup if you want to debug, run tests, or step through agent code with VS Code.
-
-### 0 — Prerequisites
-
-| Tool | Version | Used by |
-|---|---|---|
-| **Python** | 3.10+ | gateway, SDK, agents, tests |
-| **Node** | **20.9+** (Next 16 requires it; pinned in [`dashboard/.nvmrc`](dashboard/.nvmrc)) | dashboard |
-| **Supabase project** | free tier is fine | actions table + realtime |
-| **Discord application** | with a bot user + a guild + a channel | approval cards |
-| **Anthropic API key** | with Claude 4.x access | agent's LLM |
-| Razorpay test keys | optional | real test-mode charge in domain-buying demo |
-| Ollama | optional | semantic PII redaction (fallback is a regex redactor) |
-
-### 1 — Clone and create the Python venv
+## Publishing a new release
 
 ```bash
-git clone <this-repo>
-cd AgentGate
-python -m venv .venv
+# 1. Bump version in both files
+#    pyproject.toml              version = "1.0.1"
+#    bastion_sdk/__init__.py     __version__ = "1.0.1"
+
+# 2. Commit, tag, push
+git add pyproject.toml bastion_sdk/__init__.py
+git commit -m "release: v1.0.1"
+git tag v1.0.1
+git push && git push --tags
 ```
 
-Then **activate it** — every command in this guide assumes the venv is active.
-
-```bash
-# macOS / Linux
-source .venv/bin/activate
-
-# Windows PowerShell
-.\.venv\Scripts\Activate.ps1
-
-# Windows cmd
-.venv\Scripts\activate.bat
-```
-
-Your prompt should now show a `(.venv)` prefix. If PowerShell rejects `Activate.ps1`, run once: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`.
-
-### 2 — Install Python dependencies
-
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
-pip install -r requirements-dev.txt   # only if you'll run pytest
-```
-
-Sanity check the venv: `which python` (Linux/mac) or `(Get-Command python).Source` (PowerShell) must point inside `.venv/`. If not, the venv isn't activated — go back to step 1.
-
-### 3 — Stand up the external services
-
-**3a. Supabase**
-
-1. Create a project at <https://supabase.com>.
-2. In the SQL editor, paste and run the entire contents of [`supabase/schema.sql`](supabase/schema.sql). This creates the `actions` table, the `audit_events` table, the realtime publication, and the RLS policies.
-3. From **Project Settings → API**, copy:
-   - **Project URL** → `SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL`
-   - **`anon` public key** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - **`service_role` secret key** → `SUPABASE_SERVICE_KEY`
-
-**3b. Discord**
-
-1. Create an app at <https://discord.com/developers/applications> → **Bot** → reset token → `DISCORD_BOT_TOKEN`.
-2. Under **OAuth2 → URL Generator**, scope `bot`, permissions `Send Messages`, `Embed Links`, `Read Message History`. Open the generated URL and invite the bot to a server.
-3. In Discord, enable Developer Mode (User Settings → Advanced), right-click the channel you want approval cards in → **Copy Channel ID** → `DISCORD_CHANNEL_ID`.
-
-**3c. Anthropic**
-
-Get an API key at <https://console.anthropic.com> → `ANTHROPIC_API_KEY`.
-
-### 4 — Configure environment files
-
-Both files must point at the **same** Supabase project, or the dashboard will load but show nothing.
-
-**Root `.env`** (consumed by the gateway):
-
-```bash
-cp .env.example .env
-```
-
-Then fill in `.env` with the values from step 3:
-
-```env
-SUPABASE_URL=https://<ref>.supabase.co
-SUPABASE_SERVICE_KEY=<service_role key>
-NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
-DISCORD_BOT_TOKEN=<bot token>
-DISCORD_CHANNEL_ID=<channel id>
-ANTHROPIC_API_KEY=<key>
-GATE_SHARED_SECRET=<any random string>
-# Razorpay + LOCAL_LLM_URL are optional
-```
-
-**Dashboard `dashboard/.env.local`** (consumed by Next.js, **same values** as the two `NEXT_PUBLIC_*` keys above):
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
-```
-
-> **Heads up:** Next.js reads `.env.local` only at startup. If you change it, restart `npm run dev`.
-
-### 5 — Install dashboard dependencies
-
-```bash
-cd dashboard
-npm install
-cd ..
-```
-
-If `npm install` complains about Node version, you're on the wrong Node. See [Windows gotchas](#windows-gotchas) below.
-
-### 6 — Smoke-test the install
-
-With the venv active:
-
-```bash
-# 1. Boot the gateway in one terminal
-uvicorn gateway.main:app --port 8000
-```
-
-In a second terminal:
-
-```bash
-# 2. Health check — must say "supabase": true, "discord": true
-curl http://localhost:8000/healthz
-```
-
-If `supabase` or `discord` is `false`, the gateway can't see your keys — re-check `.env` and make sure the gateway terminal has the venv activated.
-
-```bash
-# 3. Run the test suite
-pytest -v
-```
-
-All 32 tests should pass. If they don't, your `.venv` probably has stale deps — `pip install -r requirements.txt` again.
-
-### 7 — Run the full stack
-
-Three terminals, all with the venv activated where Python is needed:
-
-```bash
-# Terminal 1 — gateway + Discord bot
-uvicorn gateway.main:app --port 8000
-
-# Terminal 2 — dashboard at http://localhost:3000
-cd dashboard && npm run dev
-
-# Terminal 3 — pick one of the four demos
-python -m agent.run                # domain buying  (approval + INPUT + Modify Budget)
-python -m agent.bank_run           # bank login     (PII redaction proof)
-python -m agent.injection_run      # prompt injection defense
-python -m agent.run --unsafe       # contrast: agent with AgentGate disabled
-```
-
-Open <http://localhost:3000>. The status chip should switch from "Connecting…" to **Live**. As the agent runs, rows stream in.
-
-### Docker shortcut
-
-If you have Docker, the entire setup collapses to:
-
-```bash
-docker compose up
-```
-
-You still need `.env` and `dashboard/.env.local` filled in (step 4), and you still need to run the Supabase schema (step 3a) and Discord setup (step 3b). Docker just handles the Python/Node side.
-
-<a id="windows-gotchas"></a>
-### Windows gotchas worth knowing
-
-These all bit us during real onboarding — none are obvious from error messages.
-
-- **Node keeps reverting to an old version (e.g., 18.x).** Volta and nvm-windows both install a `node` shim. Volta's shim is first on PATH, so `nvm use 20.9.0` silently does nothing — Volta resolves `node` to its own pinned default. Fix: either `volta pin node@20.9.0` inside the repo (writes the pin into `package.json`, survives Git, auto-installs on first use) or remove `C:\Program Files\Volta\` from PATH.
-- **Gateway returns 500 on every request, but `/healthz` is fine.** Almost always the wrong Python interpreter — `uvicorn` was launched against system Python (which has stale Supabase deps) instead of the project `.venv`. Pin VS Code to the venv: create `.vscode/settings.json` with `"python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe"`, **Developer: Reload Window**, then re-launch.
-- **PowerShell blocks `Activate.ps1`.** Once: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`.
-- **Dashboard shows "Connecting…" forever, no rows.** `dashboard/.env.local` and `.env` are pointing at different Supabase projects. Sync the two `NEXT_PUBLIC_*` values, restart `npm run dev` — Next reads `.env.local` only at boot.
-- **Port 8000 stuck even after killing uvicorn.** Uvicorn with `--reload` spawns a worker child; killing the parent leaves the child holding the port. `Get-Process python` to find the orphan, `Stop-Process -Id <pid> -Force`.
-
----
-
-## SDK in 30 seconds
-
-```python
-from agentgate_sdk import gate
-
-def search_domain(idea: str) -> str:
-    """Search available .com domains."""
-    return run_real_search(idea)
-
-def execute_purchase(domain: str, price: float) -> str:
-    """Charge the user's card and register the domain."""
-    return charge_and_register(domain, price)
-
-def fetch_patient_record(patient_id: int) -> str:
-    """Return raw EHR data."""
-    return ehr_db.lookup(patient_id)
-
-tools = [
-    gate(search_domain, risk="low"),                          # auto-passes
-    gate(execute_purchase, risk="high", mode="approval",      # human approves
-         display=lambda kw: {"cost": kw["price"]}),
-    gate(fetch_patient_record, risk="low", sensitive=True),   # PII redacted
-]
-```
-
-That's it. The same `gate()` works with any framework that consumes LangChain
-tools (CrewAI, OpenAI Agents SDK, your custom orchestrator).
-
-### Policy belongs to security teams, not agent code
-
-Drop a `risk-policies.yaml` at the repo root and the SDK treats *that* as the
-source of truth — security teams own risk classification via PR review, and
-developers just write `gate(my_tool)` and pick up the right policy
-automatically:
-
-```yaml
-# risk-policies.yaml
-defaults:
-  risk: low
-  sensitive: false
-tools:
-  execute_purchase:
-    risk: high
-    mode: approval
-  read_transactions:
-    risk: low
-    sensitive: true     # routes through the local PII redactor
-  post_to_url:
-    risk: high
-    mode: approval
-```
-
-Entries here override `risk=` / `mode=` / `sensitive=` passed to `gate()` in
-agent code. Override the file path via `AGENTGATE_POLICY_FILE`. Tools not
-listed fall through to whatever the developer's `gate()` call said.
-
----
-
-## Tests
-
-```bash
-pip install -r requirements-dev.txt
-pytest -v
-```
-
-**32 tests** covering the freeze/resume registry, every gateway route
-(in-process via `httpx.ASGITransport`), the `gate()` wrapper paths
-(approve, deny, INPUT, sensitive, Modify Budget), the local redactor's pattern
-matrix, and one real-server integration test.
-
----
-
-## Tech stack
-
-- **Gateway**: FastAPI + Uvicorn, Python 3.10+
-- **Discord**: discord.py 2.x (run inside the FastAPI process — same event loop)
-- **State + audit**: Supabase (Postgres + Realtime)
-- **Agent runtime**: LangChain + `langchain-anthropic`, Claude Sonnet 4.6
-- **Payment**: Razorpay test mode (Stripe-equivalent, India-friendly)
-- **PII redaction**: regex by default, Ollama (local LLM) optional
-- **Dashboard**: Next.js 16 (App Router) + Tailwind v4
-- **Deployment**: Docker Compose
-
----
-
-## What this is not
-
-- **Not a chatbot.** AgentGate doesn't help if your agent's failure mode is
-  saying something embarrassing. It catches actions, not text outputs.
-- **Not a substitute for cloud-side safety.** Defense in depth — the cloud LLM's
-  safety training is one layer; AgentGate is the deterministic on-device layer.
-- **Not zero-latency.** The Discord round-trip is ~2 s end-to-end. Real-time HFT
-  agents need something local-only.
-- **Not built for millions of users.** Per-action human approval doesn't scale
-  to consumer apps with bulk traffic. The wedge is agentic AI in enterprise,
-  regulated industries, and high-trust personal workflows.
+GitHub Actions automatically publishes to PyPI and Docker Hub. Requires three secrets in **repo → Settings → Secrets → Actions**:
+
+| Secret | Where to get it |
+|---|---|
+| `PYPI_TOKEN` | pypi.org → Account Settings → API tokens |
+| `DOCKERHUB_USERNAME` | your Docker Hub username |
+| `DOCKERHUB_TOKEN` | hub.docker.com → Account Settings → Security |
 
 ---
 
 ## License
 
-MIT.
+MIT — see [LICENSE](LICENSE).
 
 ---
 
-Built during a 3-day hackathon by Prashant Yadav, Vinay Upadhyay, and Samiksha
-Chhabra.
+Built by [Prashant Yadav](https://github.com/Yadavprash), Vinay Upadhyay, and Samiksha Chhabra.
