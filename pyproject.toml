@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bastion-sdk"
+version = "1.0.0"
+description = "The airlock for autonomous AI agents — freeze, approve, audit."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Prashant Yadav" },
+  { name = "Vinay Upadhyay" },
+  { name = "Samiksha Chhabra" },
+]
+keywords = ["ai", "agents", "human-in-the-loop", "audit", "compliance", "langchain"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Security",
+]
+dependencies = [
+  "httpx>=0.27",
+  "pydantic>=2.9",
+  "python-dotenv>=1.0",
+  "pyyaml>=6.0",
+  "langchain-core>=0.3",
+]
+
+[project.optional-dependencies]
+# Notifier-specific extras so customers only install what they use.
+slack       = ["httpx>=0.27"]
+pagerduty   = ["httpx>=0.27"]
+email       = ["pyjwt>=2.8"]
+ollama      = ["httpx>=0.27"]
+gateway     = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "supabase>=2.9",
+  "alembic>=1.13",
+  "sqlalchemy>=2.0",
+  "psycopg2-binary>=2.9",
+  "discord.py>=2.4",
+]
+dev         = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "anyio>=4.4",
+]
+
+[project.urls]
+Homepage      = "https://github.com/anthropics/bastion-sdk"
+Documentation = "https://github.com/anthropics/bastion-sdk#readme"
+Issues        = "https://github.com/anthropics/bastion-sdk/issues"
+
+[project.scripts]
+bastion = "bastion_sdk.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["bastion_sdk*"]
+exclude = ["tests*", "agent*", "gateway*", "dashboard*"]
+
+[tool.setuptools.package-data]
+bastion_sdk = ["py.typed"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

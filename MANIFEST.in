@@ -1,0 +1,9 @@
+include README.md
+include LICENSE
+include pyproject.toml
+recursive-include bastion_sdk *.py *.yaml *.txt py.typed
+recursive-exclude tests *
+recursive-exclude agent *
+recursive-exclude gateway *
+recursive-exclude dashboard *
+recursive-exclude supabase *

@@ -67,5 +67,7 @@ export type AuditEventRow = {
   decision_kind: DecisionKind;
   decision_version: number;
   payload: Record<string, unknown>;
+  prev_hash: string | null;
+  this_hash: string;
   created_at: string;
 };

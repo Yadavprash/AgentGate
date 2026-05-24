@@ -6,6 +6,7 @@ uuid and updates are no-ops, so the core freeze/resume flow works without it
 """
 import asyncio
 import uuid
+from datetime import datetime, timezone, timedelta
 from typing import Any, Optional
 
 from gateway.config import settings
@@ -42,6 +43,33 @@ async def update_action(job_id: str, data: dict[str, Any]) -> None:
         _get_client().table("actions").update(data).eq("id", job_id).execute()
 
     await asyncio.to_thread(_do)
+
+
+async def fetch_stale_intercepted(older_than_seconds: int) -> list[dict]:
+    """Return actions stuck in 'intercepted' for longer than older_than_seconds.
+
+    These are orphans from a previous gateway run whose in-memory asyncio.Event
+    was lost on restart. We auto-deny them in the background sweep.
+    """
+    if not settings.supabase_enabled:
+        return []
+
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(seconds=older_than_seconds)
+    ).isoformat()
+
+    def _do() -> list[dict]:
+        res = (
+            _get_client()
+            .table("actions")
+            .select("id, created_at")
+            .eq("status", "intercepted")
+            .lt("created_at", cutoff)
+            .execute()
+        )
+        return res.data or []
+
+    return await asyncio.to_thread(_do)
 
 
 async def merge_action_display(job_id: str, additions: dict[str, Any]) -> None:

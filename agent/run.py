@@ -11,11 +11,11 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-# `--unsafe` flag: bypass AgentGate entirely. Used on stage to show what would
-# happen without the airlock - the agent runs unprotected, no Discord cards,
+# `--unsafe` flag: bypass Bastion entirely. Used on stage to show what would
+# happen without the airlock - the agent runs unprotected, no approval cards,
 # no audit log entries, no PII redaction.
 if "--unsafe" in sys.argv:
-    os.environ["AGENTGATE_DISABLED"] = "1"
+    os.environ["BASTION_DISABLED"] = "1"
     sys.argv.remove("--unsafe")
     print(
         "\n!!! AGENTGATE BYPASSED !!!\n"
@@ -43,10 +43,10 @@ def main() -> None:
     print(f"Goal: {goal}\n")
 
     from agent.agent import build_agent
-    from agentgate_sdk import ApprovalTimeoutError, GateClient
+    from bastion_sdk import ApprovalTimeoutError, BastionClient
 
     agent = build_agent()
-    audit_client = GateClient()
+    audit_client = BastionClient()
 
     def _summary(text: str) -> str:
         s = (text or "").strip()

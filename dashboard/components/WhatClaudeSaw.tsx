@@ -9,7 +9,7 @@ function highlight(text: string) {
     /^\[[A-Z_]+\]$/.test(p) ? (
       <span
         key={i}
-        className="rounded bg-purple-500/30 px-1 font-mono text-purple-200"
+        className="rounded bg-purple-200 px-1 font-mono text-purple-800 dark:bg-purple-500/30 dark:text-purple-200"
       >
         {p}
       </span>
@@ -34,22 +34,22 @@ export default function WhatClaudeSaw({ rows }: { rows: ActionRow[] }) {
   const backend = String(display?.redaction_backend ?? "regex");
 
   return (
-    <div className="mb-6 overflow-hidden rounded-lg border border-purple-500/40 bg-purple-500/5">
-      <div className="flex items-center justify-between border-b border-purple-500/30 bg-purple-500/10 px-4 py-2">
-        <div className="text-sm font-medium text-purple-200">
+    <div className="mb-6 overflow-hidden rounded-lg border border-purple-500/40 bg-purple-50 dark:bg-purple-500/5">
+      <div className="flex items-center justify-between border-b border-purple-500/30 bg-purple-100 px-4 py-2 dark:bg-purple-500/10">
+        <div className="text-sm font-medium text-purple-800 dark:text-purple-200">
           🔒 What the cloud LLM actually received — most recent{" "}
-          <code className="font-mono text-purple-100">{latest.tool_name}</code>
+          <code className="font-mono text-purple-900 dark:text-purple-100">{latest.tool_name}</code>
         </div>
-        <span className="rounded-full border border-purple-500/40 bg-purple-500/15 px-2 py-0.5 text-xs text-purple-300">
+        <span className="rounded-full border border-purple-500/40 bg-purple-100 px-2 py-0.5 text-xs text-purple-700 dark:bg-purple-500/15 dark:text-purple-300">
           redactor: {backend}
         </span>
       </div>
-      <div className="grid grid-cols-2 divide-x divide-zinc-800">
+      <div className="grid grid-cols-2 divide-x divide-zinc-200 dark:divide-zinc-800">
         <div className="p-4">
           <div className="mb-2 text-xs uppercase tracking-wide text-zinc-500">
             On your device · never sent
           </div>
-          <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-300">
+          <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
             {raw}
           </pre>
         </div>
@@ -57,7 +57,7 @@ export default function WhatClaudeSaw({ rows }: { rows: ActionRow[] }) {
           <div className="mb-2 text-xs uppercase tracking-wide text-zinc-500">
             Sent to cloud LLM
           </div>
-          <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-300">
+          <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
             {highlight(redacted)}
           </pre>
         </div>

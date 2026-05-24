@@ -1,0 +1,27 @@
+# Debug overlay for the gateway.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.debug.yml up
+# Then in VS Code: Run & Debug -> "Python: Attach to Docker Gateway".
+#
+# Differences vs. docker-compose.yml:
+#   - installs debugpy at container start (no image rebuild needed)
+#   - exposes port 5678 for the debugger
+#   - mounts source dirs so breakpoints + uvicorn --reload pick up edits
+#   - disables the healthcheck (uvicorn under debugpy can be slow to first respond)
+
+services:
+  gateway:
+    ports:
+      - "8000:8000"
+      - "5678:5678"
+    volumes:
+      - ./gateway:/app/gateway
+      - ./agent:/app/agent
+      - ./agentgate_sdk:/app/agentgate_sdk
+      - ./risk-policies.yaml:/app/risk-policies.yaml
+    command:
+      - sh
+      - -c
+      - pip install --no-cache-dir debugpy && python -m debugpy --listen 0.0.0.0:5678 -m uvicorn gateway.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      disable: true

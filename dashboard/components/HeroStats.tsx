@@ -67,20 +67,20 @@ function Metric({
   accent: "zinc" | "amber" | "red" | "emerald";
 }) {
   const accentBorder = {
-    zinc: "border-zinc-800",
+    zinc: "border-zinc-200 dark:border-zinc-800",
     amber: "border-amber-500/40",
     red: "border-red-500/40",
     emerald: "border-emerald-500/40",
   } as const;
   const accentText = {
-    zinc: "text-zinc-100",
-    amber: "text-amber-300",
-    red: "text-red-300",
-    emerald: "text-emerald-300",
+    zinc: "text-zinc-900 dark:text-zinc-100",
+    amber: "text-amber-600 dark:text-amber-300",
+    red: "text-red-600 dark:text-red-300",
+    emerald: "text-emerald-600 dark:text-emerald-300",
   } as const;
   return (
     <div
-      className={`rounded-lg border bg-zinc-900/50 p-5 ${accentBorder[accent]}`}
+      className={`rounded-lg border bg-white dark:bg-zinc-900/50 p-5 ${accentBorder[accent]}`}
     >
       <div className="text-xs uppercase tracking-wide text-zinc-500">
         {label}

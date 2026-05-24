@@ -53,8 +53,8 @@ def live_server():
 
 def _build_tools(monkeypatch, base_url):
     """Build the real demo tools wired to the live server."""
-    monkeypatch.setattr("agentgate_sdk.langchain._default_client", None)
-    monkeypatch.setenv("AGENTGATE_GATEWAY_URL", base_url)
+    monkeypatch.setattr("bastion_sdk.gate._default_client", None)
+    monkeypatch.setenv("BASTION_GATEWAY_URL", base_url)
     from agent.tools import build_tools
 
     return build_tools()

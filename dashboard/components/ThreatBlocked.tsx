@@ -32,7 +32,6 @@ export default function ThreatBlocked({ rows }: { rows: ActionRow[] }) {
   const targetUrl = String(display?.target_url ?? "(no target_url recorded)");
   const payloadPreview = String(display?.payload_preview ?? "");
   const awaiting = threat.status === "intercepted";
-  const denied = threat.status === "denied" || threat.status === "timed_out";
 
   const headline = awaiting
     ? "⚠️ THREAT INTERCEPTED · AWAITING HUMAN"
@@ -43,36 +42,36 @@ export default function ThreatBlocked({ rows }: { rows: ActionRow[] }) {
 
   return (
     <div
-      className={`mb-6 overflow-hidden rounded-lg border-2 bg-red-950/40 ${
+      className={`mb-6 overflow-hidden rounded-lg border-2 bg-red-50 dark:bg-red-950/40 ${
         awaiting ? "border-amber-500 threat-pulse-amber" : "border-red-500 threat-pulse"
       }`}
     >
       <div
         className={`px-4 py-2 text-sm font-bold uppercase tracking-wider ${
           awaiting
-            ? "bg-amber-500/20 text-amber-100"
-            : "bg-red-500/25 text-red-100"
+            ? "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-100"
+            : "bg-red-200/60 text-red-900 dark:bg-red-500/25 dark:text-red-100"
         }`}
       >
         {headline}
       </div>
       <div className="space-y-3 px-4 py-4 text-sm">
-        <p className="text-red-100">{subline}</p>
+        <p className="text-red-900 dark:text-red-100">{subline}</p>
 
         <div className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1.5 font-mono text-xs">
-          <span className="text-red-300/70">agent</span>
-          <span className="text-red-50">{threat.agent_name}</span>
+          <span className="text-red-700/80 dark:text-red-300/70">agent</span>
+          <span className="text-red-900 dark:text-red-50">{threat.agent_name}</span>
 
-          <span className="text-red-300/70">attempted</span>
-          <span className="text-red-50">{threat.tool_name}</span>
+          <span className="text-red-700/80 dark:text-red-300/70">attempted</span>
+          <span className="text-red-900 dark:text-red-50">{threat.tool_name}</span>
 
-          <span className="text-red-300/70">target_url</span>
-          <span className="break-all text-red-50">{targetUrl}</span>
+          <span className="text-red-700/80 dark:text-red-300/70">target_url</span>
+          <span className="break-all text-red-900 dark:text-red-50">{targetUrl}</span>
 
           {payloadPreview && (
             <>
-              <span className="text-red-300/70">payload</span>
-              <span className="break-all text-red-50/80">
+              <span className="text-red-700/80 dark:text-red-300/70">payload</span>
+              <span className="break-all text-red-800 dark:text-red-50/80">
                 {payloadPreview.length > 200
                   ? payloadPreview.slice(0, 200) + "…"
                   : payloadPreview}
@@ -80,10 +79,10 @@ export default function ThreatBlocked({ rows }: { rows: ActionRow[] }) {
             </>
           )}
 
-          <span className="text-red-300/70">
+          <span className="text-red-700/80 dark:text-red-300/70">
             {awaiting ? "intercepted at" : "denied at"}
           </span>
-          <span className="text-red-50">
+          <span className="text-red-900 dark:text-red-50">
             {time(awaiting ? threat.created_at : threat.decided_at)}
           </span>
         </div>

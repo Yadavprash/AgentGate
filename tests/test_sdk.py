@@ -1,5 +1,5 @@
-"""Tests for the gate() LangChain wrapper, using a stub gateway client."""
-from agentgate_sdk.langchain import gate
+"""Tests for the gate() wrapper, using a stub gateway client."""
+from bastion_sdk import gate
 
 
 def _search(idea: str) -> str:
@@ -102,11 +102,11 @@ def test_sensitive_redacts_output_and_args(stub_client_factory, monkeypatch):
 
 
 def test_policy_yaml_overrides_gate_args(stub_client_factory, tmp_path, monkeypatch):
-    """risk-policies.yaml is the source of truth - its entries OVERRIDE
+    """bastion-policy.yaml is the source of truth - its entries OVERRIDE
     whatever the developer passed to gate()."""
-    from agentgate_sdk import policy
+    from bastion_sdk import policy
 
-    policy_file = tmp_path / "risk-policies.yaml"
+    policy_file = tmp_path / "bastion-policy.yaml"
     policy_file.write_text(
         "tools:\n"
         "  policy_pinned_tool:\n"
@@ -114,7 +114,7 @@ def test_policy_yaml_overrides_gate_args(stub_client_factory, tmp_path, monkeypa
         "    mode: approval\n",
         encoding="utf-8",
     )
-    monkeypatch.setenv("AGENTGATE_POLICY_FILE", str(policy_file))
+    monkeypatch.setenv("BASTION_POLICY_FILE", str(policy_file))
     policy.reload()
 
     stub = stub_client_factory({"job_id": "jp", "decision": "approved"})

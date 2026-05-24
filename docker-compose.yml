@@ -19,7 +19,7 @@ services:
       retries: 3
 
   dashboard:
-    image: node:24-alpine
+    image: node:20.9.0-alpine
     container_name: agentgate-dashboard
     working_dir: /app
     volumes:
