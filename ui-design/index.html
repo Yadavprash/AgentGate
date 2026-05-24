@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bastion SDK — UI Design</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d1117;font-family:'Inter',sans-serif;color:#f9fafb;}
+
+/* ── CANVAS ─────────────────────────────────────────── */
+.canvas{
+  background:#0d1117;
+  background-image:radial-gradient(#1e2d3d 1px,transparent 1px);
+  background-size:32px 32px;
+  padding:60px 40px 100px;
+}
+.canvas-header{text-align:center;margin-bottom:64px;}
+.canvas-header h1{font-size:13px;font-weight:600;color:#30363d;letter-spacing:.15em;text-transform:uppercase;}
+.canvas-header p{font-size:12px;color:#21262d;margin-top:4px;letter-spacing:.08em;}
+
+/* ── SCREEN SECTION ─────────────────────────────────── */
+.section-wrap{margin-bottom:80px;}
+.section-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#161b22;border:1px solid #21262d;
+  border-radius:6px;padding:5px 12px;
+  font-size:11px;font-weight:600;color:#58a6ff;
+  letter-spacing:.08em;text-transform:uppercase;
+  margin-bottom:20px;
+}
+
+/* ── BROWSER FRAME ─────────────────────────────────── */
+.browser{
+  background:#161b22;
+  border:1px solid #21262d;
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 0 0 1px #21262d,0 8px 16px rgba(0,0,0,.4),0 24px 48px rgba(0,0,0,.5);
+  width:100%;
+  max-width:1280px;
+  margin:0 auto;
+}
+.browser-bar{
+  background:#21262d;
+  height:38px;
+  display:flex;align-items:center;gap:8px;
+  padding:0 14px;
+  border-bottom:1px solid #30363d;
+}
+.browser-dots{display:flex;gap:6px;}
+.dot-r{width:12px;height:12px;border-radius:50%;background:#ff5f57;}
+.dot-y{width:12px;height:12px;border-radius:50%;background:#ffbd2e;}
+.dot-g{width:12px;height:12px;border-radius:50%;background:#28c840;}
+.browser-url{
+  flex:1;background:#161b22;border:1px solid #30363d;border-radius:6px;
+  height:22px;margin:0 12px;display:flex;align-items:center;padding:0 10px;
+  font-size:11px;color:#8b949e;font-family:'JetBrains Mono',monospace;
+}
+
+/* ── APP SHELL ─────────────────────────────────────── */
+.app{background:#09090b;min-height:620px;}
+
+/* ── TOPBAR ────────────────────────────────────────── */
+.topbar{
+  background:#09090b;
+  border-bottom:1px solid #1c1c1e;
+  height:48px;display:flex;align-items:center;
+  justify-content:space-between;padding:0 20px;
+}
+.logo{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#f4f4f5;}
+.logo-icon{
+  width:26px;height:26px;border-radius:7px;
+  background:linear-gradient(135deg,#1d4ed8,#0ea5e9);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;
+}
+.nav{display:flex;gap:1px;}
+.nav a{
+  padding:5px 13px;border-radius:7px;font-size:13px;
+  color:#71717a;cursor:pointer;
+}
+.nav a.on{background:#18181b;color:#f4f4f5;font-weight:500;}
+.tr{display:flex;align-items:center;gap:8px;}
+
+/* ── PILLS ─────────────────────────────────────────── */
+.p{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap;}
+.pg{background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.2);}
+.pa{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.2);}
+.pr{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2);}
+.ps{background:rgba(14,165,233,.1);color:#38bdf8;border:1px solid rgba(14,165,233,.2);}
+.pz{background:rgba(113,113,122,.1);color:#a1a1aa;border:1px solid rgba(113,113,122,.2);}
+.pn{background:rgba(29,78,216,.1);color:#93c5fd;border:1px solid rgba(29,78,216,.25);}
+.dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+/* ── PAGE BODY ─────────────────────────────────────── */
+.body{padding:24px 28px;}
+
+/* ── ALERT ─────────────────────────────────────────── */
+.alert{
+  background:rgba(245,158,11,.07);
+  border:1px solid rgba(245,158,11,.2);
+  border-radius:10px;padding:11px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;
+}
+.alert-text{font-size:13px;color:#fbbf24;font-weight:500;}
+.alert-sub{font-size:12px;color:#78350f;margin-top:2px;}
+
+/* ── STAT CARDS ────────────────────────────────────── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.stat{background:#111113;border:1px solid #1c1c1e;border-radius:11px;padding:16px 18px;}
+.stat-v{font-size:28px;font-weight:700;color:#f4f4f5;line-height:1;letter-spacing:-.03em;}
+.stat-l{font-size:12px;color:#71717a;margin-top:5px;font-weight:500;}
+.stat-d{font-size:11px;color:#34d399;margin-top:5px;}
+
+/* ── CARD ──────────────────────────────────────────── */
+.card{background:#111113;border:1px solid #1c1c1e;border-radius:11px;overflow:hidden;margin-bottom:14px;}
+.card-head{padding:11px 16px;border-bottom:1px solid #1c1c1e;display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-size:11px;font-weight:600;color:#52525b;text-transform:uppercase;letter-spacing:.09em;}
+
+/* ── GRID ──────────────────────────────────────────── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* ── TABLE ─────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;}
+th{padding:8px 14px;font-size:11px;font-weight:600;color:#3f3f46;text-transform:uppercase;letter-spacing:.08em;text-align:left;background:#0d0d0f;}
+td{padding:9px 14px;font-size:12px;color:#a1a1aa;border-top:1px solid #1c1c1e;}
+tr:hover td{background:rgba(255,255,255,.012);}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:#52525b;}
+.bold{font-weight:600;color:#d4d4d8;}
+
+/* ── CHART ─────────────────────────────────────────── */
+.ch{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.ch-l{font-size:12px;color:#71717a;width:50px;font-weight:500;}
+.ch-b{flex:1;height:7px;background:#1c1c1e;border-radius:4px;overflow:hidden;}
+.ch-f{height:100%;border-radius:4px;}
+.ch-p{font-size:12px;color:#a1a1aa;width:34px;text-align:right;font-weight:500;}
+.ch-n{font-size:11px;color:#3f3f46;width:70px;text-align:right;}
+
+/* ── THREAT / PII BOXES ────────────────────────────── */
+.threat{background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.18);border-radius:10px;padding:13px 15px;margin-bottom:13px;}
+.threat h4{font-size:12px;font-weight:600;color:#f87171;margin-bottom:4px;}
+.threat p{font-size:12px;color:#71717a;}
+.pii-box{background:rgba(14,165,233,.04);border:1px solid rgba(14,165,233,.15);border-radius:10px;padding:13px 15px;margin-bottom:13px;}
+.pii-label{font-size:10px;font-weight:600;color:#3f3f46;text-transform:uppercase;letter-spacing:.09em;margin-bottom:7px;}
+.pii-row{font-size:12px;line-height:1.7;}
+.red-chip{background:rgba(29,78,216,.12);color:#93c5fd;padding:1px 5px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;}
+
+/* ── TIMELINE ──────────────────────────────────────── */
+.tl{padding:16px 18px;}
+.tl-item{display:flex;gap:13px;padding-bottom:16px;position:relative;}
+.tl-item:not(:last-child)::before{content:'';position:absolute;left:6px;top:18px;bottom:0;width:1px;background:#1c1c1e;}
+.tl-dot{width:14px;height:14px;border-radius:50%;border:2px solid;flex-shrink:0;margin-top:2px;}
+.tl-dot.h{border-color:#f59e0b;background:rgba(245,158,11,.15);}
+.tl-dot.a{border-color:#0ea5e9;background:rgba(14,165,233,.15);}
+.tl-dot.s{border-color:#52525b;background:rgba(82,82,91,.15);}
+.tl-t{font-size:12px;font-weight:600;color:#d4d4d8;}
+.tl-m{font-size:11px;color:#52525b;margin-top:2px;}
+.tl-h{font-family:'JetBrains Mono',monospace;font-size:10px;color:#27272a;margin-top:3px;}
+
+/* ── BUTTONS ───────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:inherit;}
+.btn-p{background:#1d4ed8;color:#fff;}
+.btn-s{background:#18181b;color:#a1a1aa;border:1px solid #27272a;}
+.btn-r{background:rgba(239,68,68,.08);color:#f87171;border:1px solid rgba(239,68,68,.2);}
+.sm{padding:4px 10px;font-size:11px;border-radius:6px;}
+
+/* ── INPUTS ────────────────────────────────────────── */
+.inp{background:#18181b;border:1px solid #27272a;border-radius:7px;padding:8px 11px;font-size:12px;color:#d4d4d8;width:100%;font-family:inherit;}
+.lbl{font-size:11px;font-weight:500;color:#52525b;margin-bottom:5px;display:block;}
+.ta{background:#18181b;border:1px solid #27272a;border-radius:8px;padding:11px;font-size:13px;color:#d4d4d8;width:100%;font-family:inherit;resize:none;height:72px;}
+
+/* ── CODE ──────────────────────────────────────────── */
+.code{background:#0a0a0b;border:1px solid #1c1c1e;border-radius:8px;padding:13px 15px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.75;color:#8b949e;}
+.kw{color:#c084fc;}.str{color:#86efac;}.fn{color:#60a5fa;}.cm{color:#374151;}
+
+/* ── LOG ───────────────────────────────────────────── */
+.log{background:#0a0a0b;border:1px solid #1c1c1e;border-radius:8px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.9;color:#3f3f46;height:155px;overflow:hidden;}
+.lok{color:#34d399;}.lw{color:#fbbf24;}.le{color:#f87171;}.li{color:#60a5fa;}
+
+/* ── TABS ──────────────────────────────────────────── */
+.tabs{display:flex;background:#09090b;border-bottom:1px solid #1c1c1e;padding:0 6px;}
+.tab{padding:10px 15px;font-size:13px;font-weight:500;color:#52525b;cursor:pointer;border-bottom:2px solid transparent;}
+.tab.on{color:#f4f4f5;border-bottom-color:#1d4ed8;}
+
+/* ── HEALTH ROW ────────────────────────────────────── */
+.hr{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #1c1c1e;}
+.hr:last-child{border-bottom:none;}
+.hr-l{font-size:13px;color:#d4d4d8;display:flex;align-items:center;gap:8px;}
+
+/* ── KEY ROW ───────────────────────────────────────── */
+.kr{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #1c1c1e;}
+.kr:last-child{border-bottom:none;}
+.kr-n{font-size:13px;font-weight:500;color:#d4d4d8;}
+.kr-v{font-family:'JetBrains Mono',monospace;font-size:11px;color:#3f3f46;background:#18181b;padding:2px 7px;border-radius:5px;border:1px solid #1c1c1e;}
+
+/* ── AVATAR ────────────────────────────────────────── */
+.av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}
+
+/* ── CHIP ──────────────────────────────────────────── */
+.chip{padding:6px 12px;background:#111113;border:1px solid #1c1c1e;border-radius:20px;font-size:12px;color:#71717a;cursor:pointer;display:inline-block;}
+
+/* ── MODE TOGGLE ───────────────────────────────────── */
+.mode{display:flex;background:#111113;border:1px solid #1c1c1e;border-radius:20px;padding:3px;gap:2px;}
+.mode span{padding:4px 13px;border-radius:15px;font-size:12px;font-weight:500;color:#52525b;cursor:pointer;}
+.mode span.on{background:#1d4ed8;color:#fff;}
+
+/* ── TRACE TREE ────────────────────────────────────── */
+.tree{padding:12px 16px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:2.1;color:#52525b;}
+.t0{color:#a1a1aa;font-weight:500;}
+.t1{padding-left:18px;}
+.t2{padding-left:36px;color:#1d4ed8;}
+
+/* ── POLICY ROW ────────────────────────────────────── */
+.pol{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #1c1c1e;}
+.pol:last-child{border-bottom:none;}
+.pol-n{font-size:12px;font-weight:500;color:#d4d4d8;font-family:'JetBrains Mono',monospace;}
+.pol-s{font-size:11px;color:#3f3f46;margin-top:2px;}
+.pol-t{display:flex;gap:5px;}
+
+/* ── TOGGLE ────────────────────────────────────────── */
+.tog-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.tog-lbl{font-size:13px;color:#d4d4d8;font-weight:500;}
+.tog-sub{font-size:11px;color:#3f3f46;margin-top:2px;}
+.tog{width:34px;height:19px;background:#1d4ed8;border-radius:10px;position:relative;cursor:pointer;flex-shrink:0;}
+.tog-off{background:#27272a;}
+.tog::after{content:'';width:13px;height:13px;background:#fff;border-radius:50%;position:absolute;top:3px;right:3px;}
+.tog-off::after{right:auto;left:3px;}
+
+/* ── HR ────────────────────────────────────────────── */
+.sep{height:1px;background:#1c1c1e;margin:14px 0;}
+
+/* ── SIDEBAR LAYOUT ─────────────────────────────────── */
+.with-sidebar{display:grid;grid-template-columns:240px 1fr;min-height:600px;}
+.sidebar{background:#0d0d0f;border-right:1px solid #1c1c1e;padding:16px 0;}
+.sb-item{padding:8px 16px;font-size:13px;color:#71717a;cursor:pointer;display:flex;align-items:center;gap:8px;}
+.sb-item.on{background:#18181b;color:#f4f4f5;font-weight:500;}
+.sb-sep{height:1px;background:#1c1c1e;margin:8px 0;}
+.sb-label{font-size:10px;font-weight:600;color:#3f3f46;text-transform:uppercase;letter-spacing:.1em;padding:8px 16px 4px;}
+
+/* ─────────────────────────────────────────────────── */
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <div class="canvas-header">
+    <h1>🛡️ Bastion SDK — UI Design System</h1>
+    <p>All Screens · Dark Mode · Mapped to Implementation Roadmap</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       SCREEN 01 — DASHBOARD
+  ══════════════════════════════════════════════════ -->
+  <div class="section-wrap">
+    <div class="section-tag">01 · Dashboard — Main</div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="browser-dots"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div></div>
+        <div class="browser-url">localhost:3000</div>
+      </div>
+      <div class="app">
+        <div class="topbar">
+          <div style="display:flex;align-items:center;gap:18px;">
+            <div class="logo"><div class="logo-icon">🛡</div>BASTION</div>
+            <div class="nav">
+              <a class="on">Dashboard</a><a>Agents</a><a>Policies</a><a>Audit</a><a>Settings</a>
+            </div>
+          </div>
+          <div class="tr">
+            <div class="p pg"><span class="dot"></span>Chain ✓</div>
+            <div class="p pg"><span class="dot"></span>All systems ok</div>
+            <div class="p pg"><span class="dot"></span>Live</div>
+            <div class="av">VU</div>
+          </div>
+        </div>
+
+        <div class="body">
+          <!-- ANOMALY BANNER -->
+          <div class="alert">
+            <div>
+              <div class="alert-text">⚠️ Anomaly Detected — payment-agent denial rate spiked 4× in 10 min</div>
+              <div class="alert-sub">Denied 12 of 14 calls · possibly a prompt injection · payment-agent-v2</div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-s sm">Mute 1h</button>
+              <button class="btn sm" style="background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid rgba(245,158,11,.25);">Investigate →</button>
+            </div>
+          </div>
+
+          <!-- HEADER -->
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+            <div>
+              <div style="font-size:20px;font-weight:600;color:#f4f4f5;letter-spacing:-.02em;">Bastion SDK</div>
+              <div style="font-size:13px;color:#52525b;margin-top:3px;">Three-layer trust system for autonomous AI agents</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <select class="inp" style="width:auto;padding:5px 10px;font-size:12px;"><option>All Agents</option><option>payment-agent-v2</option></select>
+              <select class="inp" style="width:auto;padding:5px 10px;font-size:12px;"><option>Last 24h</option></select>
+              <button class="btn btn-s sm">▶ Agents</button>
+              <button class="btn sm" style="background:rgba(168,85,247,.1);color:#c084fc;border:1px solid rgba(168,85,247,.2);">View pitch →</button>
+            </div>
+          </div>
+
+          <!-- STATS -->
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-v">142</div>
+              <div class="stat-l">Total Actions</div>
+              <div class="stat-d">↑ 12 today</div>
+            </div>
+            <div class="stat">
+              <div class="stat-v" style="color:#fbbf24;">18</div>
+              <div class="stat-l">Pending Approval</div>
+              <div class="stat-d" style="color:#fbbf24;">3 expiring soon</div>
+            </div>
+            <div class="stat">
+              <div class="stat-v" style="color:#34d399;">$12,400</div>
+              <div class="stat-l">Spend Held</div>
+              <div class="stat-d">24h window</div>
+            </div>
+            <div class="stat">
+              <div class="stat-v" style="color:#f87171;">4</div>
+              <div class="stat-l">Threats Blocked</div>
+              <div class="stat-d" style="color:#f87171;">↑ 2 today</div>
+            </div>
+          </div>
+
+          <!-- 2-COL -->
+          <div class="g2">
+            <div>
+              <!-- THREAT -->
+              <div class="threat">
+                <h4>🚨 Prompt Injection Blocked</h4>
+                <p>External URL tried to inject instructions into execute_payment(). Bastion intercepted and denied before execution.</p>
+              </div>
+              <!-- PII -->
+              <div class="pii-box">
+                <div class="pii-label">What Claude Saw (PII Firewall)</div>
+                <div class="pii-row" style="margin-bottom:4px;color:#52525b;font-size:11px;">Before:</div>
+                <div class="pii-row" style="color:#d4d4d8;margin-bottom:6px;">"Patient John Doe, DOB 1985-03-12, card 4111-1111-1111-1111"</div>
+                <div class="pii-row" style="margin-bottom:4px;color:#52525b;font-size:11px;">After:</div>
+                <div class="pii-row">"Patient <span class="red-chip">[NAME]</span>, DOB <span class="red-chip">[DATE]</span>, card <span class="red-chip">[CARD]</span>"</div>
+              </div>
+              <!-- ACTOR -->
+              <div class="card">
+                <div class="card-head">
+                  <span class="card-title">Actor Breakdown</span>
+                  <span style="font-size:11px;color:#3f3f46;">142 decisions · 30d</span>
+                </div>
+                <div style="padding:15px 16px;">
+                  <div class="ch"><span class="ch-l">AI</span><div class="ch-b"><div class="ch-f" style="width:58%;background:#0ea5e9;"></div></div><span class="ch-p" style="color:#38bdf8;">58%</span><span class="ch-n">82 decisions</span></div>
+                  <div class="ch"><span class="ch-l">Human</span><div class="ch-b"><div class="ch-f" style="width:31%;background:#f59e0b;"></div></div><span class="ch-p" style="color:#fbbf24;">31%</span><span class="ch-n">44 decisions</span></div>
+                  <div class="ch"><span class="ch-l">System</span><div class="ch-b"><div class="ch-f" style="width:11%;background:#52525b;"></div></div><span class="ch-p" style="color:#71717a;">11%</span><span class="ch-n">16 decisions</span></div>
+                  <div class="sep"></div>
+                  <div style="display:flex;gap:7px;flex-wrap:wrap;">
+                    <div class="p pg">✓ 124 Approved</div>
+                    <div class="p pr">✗ 14 Denied</div>
+                    <div class="p ps">🛡 31 Redacted</div>
+                    <div class="p pr">🚨 4 Threats</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- DECISION TRAIL -->
+            <div class="card" style="margin-bottom:0;">
+              <div class="card-head">
+                <span class="card-title">Decision Trail</span>
+                <span style="font-size:11px;color:#3f3f46;">last 20 events</span>
+              </div>
+              <table>
+                <thead><tr><th>Time</th><th>Action</th><th>Actor</th><th>Decision</th><th>Detail</th></tr></thead>
+                <tbody>
+                  <tr><td class="mono">14:32:08</td><td class="mono">a3f4…</td><td><div class="p pa" style="font-size:10px;">HUMAN</div></td><td><div class="p pg" style="font-size:10px;">approved</div></td><td class="mono">by:vinay</td></tr>
+                  <tr><td class="mono">14:32:07</td><td class="mono">a3f4…</td><td><div class="p pz" style="font-size:10px;">SYSTEM</div></td><td><div class="p pa" style="font-size:10px;">intercepted</div></td><td class="mono">amount=5000</td></tr>
+                  <tr><td class="mono">14:30:11</td><td class="mono">b2c1…</td><td><div class="p ps" style="font-size:10px;">AI</div></td><td><div class="p pg" style="font-size:10px;">approved</div></td><td class="mono">tool=fetch_record</td></tr>
+                  <tr><td class="mono">14:28:54</td><td class="mono">c9d8…</td><td><div class="p pa" style="font-size:10px;">HUMAN</div></td><td><div class="p pr" style="font-size:10px;">denied</div></td><td class="mono">by:samiksha</td></tr>
+                  <tr><td class="mono">14:27:02</td><td class="mono">d0e1…</td><td><div class="p ps" style="font-size:10px;">AI</div></td><td><div class="p pg" style="font-size:10px;">approved</div></td><td class="mono">send_email</td></tr>
+                  <tr><td class="mono">14:25:38</td><td class="mono">e4f2…</td><td><div class="p pz" style="font-size:10px;">SYSTEM</div></td><td><div class="p ps" style="font-size:10px;">pii_redacted</div></td><td class="mono">NAME,CARD</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ACTIONS TABLE -->
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">Actions</span>
+              <span style="font-size:11px;color:#3f3f46;">Click any row to inspect full lifecycle →</span>
+            </div>
+            <table>
+              <thead><tr><th>Time</th><th>Tool</th><th>Agent</th><th>Risk</th><th>Status</th><th>Mode</th><th>Cost</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">14:32:07</td><td class="bold">execute_payment</td><td class="mono">payment-v2</td><td><div class="p pr" style="font-size:10px;">HIGH</div></td><td><div class="p pg" style="font-size:10px;">✓ approved</div></td><td class="mono">approval</td><td class="mono" style="color:#34d399;">$5,000</td></tr>
+                <tr><td class="mono">14:30:11</td><td class="bold">fetch_patient_record</td><td class="mono">health-v1</td><td><div class="p pg" style="font-size:10px;">LOW</div></td><td><div class="p ps" style="font-size:10px;">🛡 redacted</div></td><td class="mono">monitor</td><td class="mono">—</td></tr>
+                <tr><td class="mono">14:28:54</td><td class="bold">delete_user</td><td class="mono">admin-v1</td><td><div class="p pr" style="font-size:10px;">HIGH</div></td><td><div class="p pr" style="font-size:10px;">✗ denied</div></td><td class="mono">approval</td><td class="mono">$0</td></tr>
+                <tr><td class="mono">14:25:38</td><td class="bold">post_to_url</td><td class="mono">news-v1</td><td><div class="p pr" style="font-size:10px;">HIGH</div></td><td><div class="p pr" style="font-size:10px;">🚨 blocked</div></td><td class="mono">shadow</td><td class="mono">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       SCREEN 02 — ACTION DRAWER + AGENTS SIDE BY SIDE
+  ══════════════════════════════════════════════════ -->
+  <div class="section-wrap">
+    <div class="section-tag">02 · Action Detail Drawer &amp; Agent Launcher</div>
+    <div style="display:grid;grid-template-columns:420px 1fr;gap:24px;max-width:1280px;margin:0 auto;">
+
+      <!-- DRAWER -->
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="browser-dots"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div></div>
+          <div class="browser-url">Action Detail — execute_payment</div>
+        </div>
+        <div class="app">
+          <div class="topbar" style="justify-content:space-between;">
+            <span style="font-size:13px;font-weight:600;color:#f4f4f5;">Action Detail</span>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-s sm">Copy ID</button>
+              <button class="btn btn-s sm">✕</button>
+            </div>
+          </div>
+          <div class="body">
+            <div style="margin-bottom:16px;">
+              <div style="font-size:20px;font-weight:700;color:#f4f4f5;letter-spacing:-.02em;">execute_payment</div>
+              <div style="display:flex;gap:7px;margin-top:8px;align-items:center;flex-wrap:wrap;">
+                <div class="p pa">payment-agent-v2</div>
+                <div class="p pr">HIGH RISK</div>
+                <div style="font-size:13px;color:#34d399;font-weight:600;">$5,000</div>
+              </div>
+              <div class="mono" style="margin-top:7px;color:#27272a;">a3f4-b2c1-9d8e-7f1a</div>
+            </div>
+
+            <div class="lbl" style="margin-bottom:7px;">Tool Arguments</div>
+            <div class="code" style="margin-bottom:16px;font-size:11px;">
+              <span style="color:#52525b;">{</span><br/>
+              &nbsp;&nbsp;<span class="str">"amount"</span>: <span style="color:#fb923c;">5000</span>,<br/>
+              &nbsp;&nbsp;<span class="str">"recipient"</span>: <span class="str">"Acme Vendor Inc"</span>,<br/>
+              &nbsp;&nbsp;<span class="str">"currency"</span>: <span class="str">"USD"</span><br/>
+              <span style="color:#52525b;">}</span>
+            </div>
+
+            <div class="lbl" style="margin-bottom:7px;">Trace Tree</div>
+            <div class="card" style="margin-bottom:16px;">
+              <div class="tree">
+                <div class="t0">▾ orchestrator-agent <span style="color:#27272a;">(a3f4…)</span></div>
+                <div class="t1">└─ ▾ payment-agent <span style="color:#27272a;">(b2c1…)</span></div>
+                <div class="t2">└─ execute_payment <span style="color:#fbbf24;font-size:10px;">← THIS</span></div>
+              </div>
+            </div>
+
+            <div class="lbl" style="margin-bottom:10px;">Lifecycle Timeline</div>
+            <div class="tl">
+              <div class="tl-item">
+                <div class="tl-dot a"></div>
+                <div><div class="tl-t">intercepted <span style="font-size:10px;color:#3f3f46;">(genesis)</span></div><div class="tl-m">AI · v1 · 14:32:07</div><div class="tl-h">this: 8f3a…e2b1 <span style="color:#1d4ed8;cursor:pointer;">[copy]</span></div></div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot s"></div>
+                <div><div class="tl-t">notification_sent</div><div class="tl-m">System · v2 · 14:32:07</div><div class="tl-h">prev: 8f3a…e2b1 · this: c1d4…9f8e</div></div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot h"></div>
+                <div><div class="tl-t">approved</div><div class="tl-m">Human (vinay) · v3 · 14:32:08</div><div class="tl-h">prev: c1d4…9f8e · this: a90b…5c2f</div></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="btn btn-s sm" style="flex:1;justify-content:center;">Re-verify chain</button>
+              <button class="btn btn-s sm" style="flex:1;justify-content:center;">Export JSON</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENT LAUNCHER -->
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="browser-dots"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div></div>
+          <div class="browser-url">localhost:3000/agents</div>
+        </div>
+        <div class="app">
+          <div class="topbar">
+            <div style="display:flex;align-items:center;gap:18px;">
+              <div class="logo"><div class="logo-icon">🛡</div>BASTION</div>
+              <div class="nav"><a>Dashboard</a><a class="on">Agents</a><a>Policies</a></div>
+            </div>
+            <div class="tr"><div class="p pg"><span class="dot"></span>Live</div><div class="av">VU</div></div>
+          </div>
+          <div class="body">
+            <div style="font-size:20px;font-weight:600;color:#f4f4f5;margin-bottom:4px;">Agent Launcher</div>
+            <div style="font-size:13px;color:#52525b;margin-bottom:18px;">Run agents end-to-end. Every tool call is gated by Bastion.</div>
+
+            <div class="card" style="margin-bottom:14px;">
+              <div style="padding:16px;">
+                <div class="lbl">What should the agent do?</div>
+                <textarea class="ta">Buy the domain bastion.dev for under $20</textarea>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+                  <div class="chip">🛒 Buy a domain</div>
+                  <div class="chip">🏦 Bank transactions</div>
+                  <div class="chip">💉 Research news</div>
+                  <div class="chip">⚠️ Unsafe demo</div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+                  <div class="mode">
+                    <span class="on">◉ Safe</span>
+                    <span>○ Unsafe</span>
+                  </div>
+                  <button class="btn btn-p">▶ Run <span style="font-size:10px;opacity:.6;margin-left:4px;">⌘↵</span></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:14px;">
+              <div class="card-head">
+                <span class="card-title">Live Log</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div class="p pg" style="font-size:10px;"><span class="dot"></span>Running</div>
+                  <button class="btn btn-r sm">■ Stop</button>
+                </div>
+              </div>
+              <div class="log">
+                <div>[14:32:01] <span class="lok">Starting agent...</span></div>
+                <div>[14:32:02] <span class="li">LLM → tool: search_domain("bastion.dev")</span></div>
+                <div>[14:32:03] <span class="lok">[gate] search_domain → low risk, auto-approved ✓</span></div>
+                <div>[14:32:04] <span class="li">LLM → tool: check_price("bastion.dev")</span></div>
+                <div>[14:32:05] <span class="lok">[gate] check_price → low risk, auto-approved ✓</span></div>
+                <div>[14:32:06] <span class="li">LLM → tool: execute_purchase("bastion.dev", 18.00)</span></div>
+                <div>[14:32:07] <span class="lw">[gate] execute_purchase → HIGH risk, FROZEN ⏸</span></div>
+                <div>[14:32:07] <span class="lw">Waiting for human approval on Slack...</span></div>
+              </div>
+            </div>
+
+            <div style="font-size:11px;font-weight:600;color:#3f3f46;text-transform:uppercase;letter-spacing:.09em;margin-bottom:10px;">Active Agents</div>
+            <div class="g3">
+              <div style="background:#111113;border:1px solid #1c1c1e;border-radius:10px;padding:14px;">
+                <div style="font-size:18px;margin-bottom:6px;">🛒</div>
+                <div style="font-size:13px;font-weight:600;color:#d4d4d8;">payment-agent</div>
+                <div class="mono" style="margin-top:2px;">v2 · 14 actions</div>
+                <div class="p pg" style="font-size:10px;margin-top:8px;">running</div>
+              </div>
+              <div style="background:#111113;border:1px solid #1c1c1e;border-radius:10px;padding:14px;">
+                <div style="font-size:18px;margin-bottom:6px;">🏥</div>
+                <div style="font-size:13px;font-weight:600;color:#d4d4d8;">health-agent</div>
+                <div class="mono" style="margin-top:2px;">v1 · 8 actions</div>
+                <div class="p pz" style="font-size:10px;margin-top:8px;">idle</div>
+              </div>
+              <div style="background:#111113;border:1px solid #1c1c1e;border-radius:10px;padding:14px;">
+                <div style="font-size:18px;margin-bottom:6px;">📰</div>
+                <div style="font-size:13px;font-weight:600;color:#d4d4d8;">news-agent</div>
+                <div class="mono" style="margin-top:2px;">v1 · 3 actions</div>
+                <div class="p pz" style="font-size:10px;margin-top:8px;">idle</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       SCREEN 03 — SETTINGS
+  ══════════════════════════════════════════════════ -->
+  <div class="section-wrap">
+    <div class="section-tag">03 · Settings — API Keys · Notifications · Redaction · Team</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:1280px;margin:0 auto;">
+
+      <!-- API KEYS -->
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="browser-dots"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div></div>
+          <div class="browser-url">localhost:3000/settings</div>
+        </div>
+        <div class="app">
+          <div class="topbar"><div class="logo"><div class="logo-icon">🛡</div>BASTION</div><div class="tr"><div class="p pg"><span class="dot"></span>Live</div><div class="av">VU</div></div></div>
+          <div class="tabs"><div class="tab on">API Keys</div><div class="tab">Notifications</div><div class="tab">Redaction</div><div class="tab">Team</div><div class="tab">Gateway</div></div>
+          <div class="body">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <div><div style="font-size:16px;font-weight:600;color:#f4f4f5;">API Keys</div><div style="font-size:12px;color:#52525b;margin-top:3px;">Authenticate your SDK instances with the Gateway.</div></div>
+              <button class="btn btn-p sm">+ Generate new</button>
+            </div>
+            <div class="card">
+              <div style="padding:0 16px;">
+                <div class="kr"><div><div class="kr-n">payment-prod</div><div class="kr-v">sk-live-7f3a…c2b1</div></div><div style="display:flex;align-items:center;gap:7px;"><span style="font-size:11px;color:#3f3f46;">2 min ago</span><div class="p pg" style="font-size:10px;">active</div><button class="btn btn-r sm">Revoke</button></div></div>
+                <div class="kr"><div><div class="kr-n">payment-staging</div><div class="kr-v">sk-live-c1e9…a04f</div></div><div style="display:flex;align-items:center;gap:7px;"><span style="font-size:11px;color:#3f3f46;">1 day ago</span><div class="p pg" style="font-size:10px;">active</div><button class="btn btn-r sm">Revoke</button></div></div>
+                <div class="kr"><div><div class="kr-n">analytics-dev</div><div class="kr-v">sk-live-9b22…e7d3</div></div><div style="display:flex;align-items:center;gap:7px;"><span style="font-size:11px;color:#3f3f46;">never</span><div class="p pa" style="font-size:10px;">unused</div><button class="btn btn-r sm">Revoke</button></div></div>
+              </div>
+            </div>
+            <div style="font-size:12px;color:#3f3f46;margin-top:10px;">⚠️ Revoked keys remain valid for 24 hours to allow key rotation.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATIONS -->
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="browser-dots"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div></div>
+          <div class="browser-url">localhost:3000/settings#notifications</div>
+        </div>
+        <div class="app">
+          <div class="topbar"><div class="logo"><div class="logo-icon">🛡</div>BASTION</div><div class="tr"><div class="p pg"><span class="dot"></span>Live</div><div class="av">VU</div></div></div>
+          <div class="tabs"><div class="tab">API Keys</div><div class="tab on">Notifications</div><div class="tab">Redaction</div><div class="tab">Team</div><div class="tab">Gateway</div></div>
+          <div class="body">
+            <div style="font-size:16px;font-weight:600;color:#f4f4f5;margin-bottom:4px;">Notification Channels</div>
+            <div style="font-size:12px;color:#52525b;margin-bottom:16px;">Configure how humans get notified for approvals.</div>
+            <div class="card" style="margin-bottom:14px;">
+              <div style="padding:0 16px;">
+                <div class="hr"><div class="hr-l"><span style="font-size:16px;">💬</span> Discord</div><div style="display:flex;gap:7px;align-items:center;"><div class="p pg" style="font-size:10px;"><span class="dot"></span>Connected</div><button class="btn btn-s sm">Edit</button></div></div>
+                <div class="hr"><div class="hr-l"><span style="font-size:16px;">🟩</span> Slack</div><div style="display:flex;gap:7px;align-items:center;"><div class="p pg" style="font-size:10px;"><span class="dot"></span>Connected</div><button class="btn btn-s sm">Edit</button></div></div>
+                <div class="hr"><div class="hr-l"><span style="font-size:16px;">🔴</span> PagerDuty</div><div><button class="btn btn-p sm">+ Connect</button></div></div>
+                <div class="hr"><div class="hr-l"><span style="font-size:16px;">📧</span> Email</div><div><button class="btn btn-p sm">+ Connect</button></div></div>
+                <div class="hr"><div class="hr-l"><span style="font-size:16px;">🔗</span> Webhook</div><div><button class="btn btn-p sm">+ Connect</button></div></div>
+              </div>
+            </div>
+            <div style="font-size:11px;font-weight:600;color:#3f3f46;text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px;">Routing Rules</div>
+            <div class="code" style="font-size:11px;">
+              <span class="cm"># Route by event type</span><br/>
+              <span class="kw">if</span> risk == <span class="str">"high"</span>       → Slack, Discord<br/>
+              <span class="kw">if</span> anomaly_detected   → PagerDuty<br/>
+              <span class="kw">if</span> threat_blocked     → Slack, email security@…
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REDACTION -->
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="browser-dots"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div></div>
+          <div class="browser-url">localhost:3000/settings#redaction</div>
+        </div>
+        <div class="app">
+          <div class="topbar"><div class="logo"><div class="logo-icon">🛡</div>BASTION</div><div class="tr"><div class="p pg"><span class="dot"></span>Live</div><div class="av">VU</div></div></div>
+          <div class="tabs"><div class="tab">API Keys</div><div class="tab">Notifications</div><div class="tab on">Redaction</div><div class="tab">Team</div><div class="tab">Gateway</div></div>
+          <div class="body">
+            <div style="font-size:16px;font-weight:600;color:#f4f4f5;margin-bottom:4px;">PII Redaction Backend</div>
+            <div style="font-size:12px;color:#52525b;margin-bottom:16px;">Strip sensitive data before it reaches the cloud LLM.</div>
+            <div class="card" style="margin-bottom:14px;">
+              <div style="padding:16px;">
+                <div class="tog-row"><div><div class="tog-lbl">Regex <span class="p pg" style="font-size:10px;margin-left:6px;">Active</span></div><div class="tog-sub">Fast, deterministic. Catches emails, cards, SSN, phone numbers.</div></div><div class="tog"></div></div>
+                <div class="tog-row"><div><div class="tog-lbl">Ollama (Local LLM)</div><div class="tog-sub">Semantic, context-aware. Requires local Ollama.</div></div><div class="tog tog-off"></div></div>
+                <div class="tog-row"><div><div class="tog-lbl">Custom Class</div><div class="tog-sub">Provide your own Python redactor class.</div></div><div class="tog tog-off"></div></div>
+              </div>
+            </div>
+            <div style="font-size:11px;font-weight:600;color:#3f3f46;text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px;">Live Test</div>
+            <div class="card">
+              <div style="padding:14px;">
+                <div class="lbl">Input</div>
+                <div style="background:#0a0a0b;border:1px solid #1c1c1e;border-radius:7px;padding:9px 11px;font-size:12px;color:#d4d4d8;margin-bottom:10px;">"Patient John Doe, DOB 1985-03-12, card 4111-1111-1111-1111"</div>
+                <div class="lbl">Redacted output</div>
+                <div style="background:#0a0a0b;border:1px solid rgba(16,185,129,.12);border-radius:7px;padding:9px 11px;font-size:12px;color:#a1a1aa;margin-bottom:10px;">"Patient <span class="red-chip">[NAME]</span>, DOB <span class="red-chip">[DATE_OF_BIRTH]</span>, card <span class="red-chip">[CARD]</span>"</div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
+                  <div class="p ps" style="font-size:10px;">NAME</div><div class="p ps" style="font-size:10px;">DATE_OF_BIRTH</div><div class="p ps" style="font-size:10px;">CARD</div>
+                </div>
+                <button class="btn btn-s sm">Run test</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TEAM -->
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="browser-dots"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div></div>
+          <div class="browser-url">localhost:3000/settings#team</div>
+        </div>
+        <div class="app">
+          <div class="topbar"><div class="logo"><div class="logo-icon">🛡</div>BASTION</div><div class="tr"><div class="p pg"><span class="dot"></span>Live</div><div class="av">VU</div></div></div>
+          <div class="tabs"><div class="tab">API Keys</div><div class="tab">Notifications</div><div class="tab">Redaction</div><div class="tab on">Team</div><div class="tab">Gateway</div></div>
+          <div class="body">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <div><div style="font-size:16px;font-weight:600;color:#f4f4f5;">Team Access</div><div style="font-size:12px;color:#52525b;margin-top:3px;">Role-based access control for the dashboard.</div></div>
+              <button class="btn btn-p sm">+ Invite</button>
+            </div>
+            <div class="card" style="margin-bottom:14px;">
+              <table>
+                <thead><tr><th>Member</th><th>Role</th><th>Last Active</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td><div style="display:flex;align-items:center;gap:8px;"><div class="av">VU</div><div><div style="font-size:12px;font-weight:500;color:#d4d4d8;">Vinay Upadhyay</div><div class="mono">vinay@bastion.com</div></div></div></td><td><div class="p pn">Admin</div></td><td class="mono">now</td><td><button class="btn btn-s sm">Edit</button></td></tr>
+                  <tr><td><div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:linear-gradient(135deg,#5b21b6,#7c3aed);">SC</div><div><div style="font-size:12px;font-weight:500;color:#d4d4d8;">Samiksha Chhabra</div><div class="mono">samiksha@bastion.com</div></div></div></td><td><div class="p pn">Admin</div></td><td class="mono">2h ago</td><td><button class="btn btn-s sm">Edit</button></td></tr>
+                  <tr><td><div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:linear-gradient(135deg,#065f46,#059669);">OA</div><div><div style="font-size:12px;font-weight:500;color:#d4d4d8;">ops@acme.com</div><div class="mono">Acme Corp</div></div></div></td><td><div class="p pa">Approver</div></td><td class="mono">1d ago</td><td><button class="btn btn-s sm">Edit</button></td></tr>
+                  <tr><td><div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:linear-gradient(135deg,#7c3aed,#a21caf);">AU</div><div><div style="font-size:12px;font-weight:500;color:#d4d4d8;">auditor@acme.com</div><div class="mono">Acme Corp</div></div></div></td><td><div class="p pz">Auditor</div></td><td class="mono">3d ago</td><td><button class="btn btn-s sm">Edit</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="font-size:11px;font-weight:600;color:#3f3f46;text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px;">Role Permissions</div>
+            <div class="card"><div style="padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div style="font-size:12px;color:#71717a;"><span class="p pn" style="font-size:10px;">Admin</span>  full access + settings</div>
+              <div style="font-size:12px;color:#71717a;"><span class="p pa" style="font-size:10px;">Approver</span>  approve/deny only</div>
+              <div style="font-size:12px;color:#71717a;"><span class="p pz" style="font-size:10px;">Auditor</span>  read-only + export</div>
+              <div style="font-size:12px;color:#71717a;"><span class="p ps" style="font-size:10px;">Developer</span>  own agent only</div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       SCREEN 04 — POLICIES
+  ══════════════════════════════════════════════════ -->
+  <div class="section-wrap">
+    <div class="section-tag">04 · Policies — bastion-policy.yaml Editor</div>
+    <div class="browser" style="max-width:1280px;margin:0 auto;">
+      <div class="browser-bar">
+        <div class="browser-dots"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div></div>
+        <div class="browser-url">localhost:3000/policies</div>
+      </div>
+      <div class="app">
+        <div class="topbar">
+          <div style="display:flex;align-items:center;gap:18px;"><div class="logo"><div class="logo-icon">🛡</div>BASTION</div><div class="nav"><a>Dashboard</a><a>Agents</a><a class="on">Policies</a></div></div>
+          <div class="tr"><button class="btn btn-s sm">Validate</button><button class="btn btn-p sm">Save changes</button><div class="av">VU</div></div>
+        </div>
+        <div class="body">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+            <div><div style="font-size:20px;font-weight:600;color:#f4f4f5;">Risk Policies</div><div style="font-size:13px;color:#52525b;margin-top:3px;">Security teams define risk. Developers just write gate(my_tool).</div></div>
+            <div class="p pg" style="padding:6px 12px;font-size:12px;">✓ Policy validated · 2 min ago</div>
+          </div>
+          <div class="g2">
+            <div class="card" style="margin-bottom:0;">
+              <div class="card-head"><span class="card-title">bastion-policy.yaml</span><span style="font-size:11px;color:#1d4ed8;cursor:pointer;">Download template</span></div>
+              <div class="code" style="border:none;border-radius:0;font-size:12px;line-height:1.85;padding:16px;">
+                <span class="cm"># bastion-policy.yaml</span><br/>
+                <span class="kw">version</span>: 1<br/><br/>
+                <span class="kw">defaults</span>:<br/>
+                &nbsp;&nbsp;<span class="kw">risk</span>: <span class="str">low</span><br/>
+                &nbsp;&nbsp;<span class="kw">sensitive</span>: <span style="color:#fb923c;">false</span><br/>
+                &nbsp;&nbsp;<span class="kw">mode</span>: <span class="str">approval</span><br/><br/>
+                <span class="kw">notifications</span>:<br/>
+                &nbsp;&nbsp;<span class="kw">channel</span>: <span class="str">slack</span><br/>
+                &nbsp;&nbsp;<span class="kw">webhook_url</span>: <span class="str">https://hooks.slack.com/…</span><br/><br/>
+                <span class="kw">tools</span>:<br/>
+                &nbsp;&nbsp;<span class="fn">execute_payment</span>:<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">risk</span>: <span style="color:#f87171;">high</span>&nbsp;&nbsp;<span class="cm"># gates this tool</span><br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">mode</span>: <span class="str">approval</span><br/>
+                &nbsp;&nbsp;<span class="fn">fetch_patient_record</span>:<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">sensitive</span>: <span style="color:#34d399;">true</span>&nbsp;<span class="cm"># PII redacted</span><br/>
+                &nbsp;&nbsp;<span class="fn">delete_record</span>:<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">risk</span>: <span style="color:#f87171;">high</span><br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">sensitive</span>: <span style="color:#34d399;">true</span><br/>
+                &nbsp;&nbsp;<span class="fn">search_web</span>:<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">risk</span>: <span class="str">low</span><br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">mode</span>: <span class="str">monitor</span><br/>
+              </div>
+            </div>
+            <div class="card" style="margin-bottom:0;">
+              <div class="card-head"><span class="card-title">Tool Coverage</span><span style="font-size:11px;color:#3f3f46;">5 tools · 4 defined</span></div>
+              <div style="padding:0 16px;">
+                <div class="pol"><div><div class="pol-n">execute_payment</div><div class="pol-s">used 142× in 30d</div></div><div class="pol-t"><div class="p pr" style="font-size:10px;">HIGH</div><div class="p pz" style="font-size:10px;">approval</div></div></div>
+                <div class="pol"><div><div class="pol-n">fetch_patient_record</div><div class="pol-s">used 82× in 30d</div></div><div class="pol-t"><div class="p pg" style="font-size:10px;">LOW</div><div class="p ps" style="font-size:10px;">🛡 PII</div></div></div>
+                <div class="pol"><div><div class="pol-n">delete_record</div><div class="pol-s">used 14× in 30d</div></div><div class="pol-t"><div class="p pr" style="font-size:10px;">HIGH</div><div class="p ps" style="font-size:10px;">🛡 PII</div></div></div>
+                <div class="pol"><div><div class="pol-n">search_web</div><div class="pol-s">used 1,032× in 30d</div></div><div class="pol-t"><div class="p pg" style="font-size:10px;">LOW</div><div class="p pz" style="font-size:10px;">monitor</div></div></div>
+                <div class="pol"><div><div class="pol-n">send_email</div><div class="pol-s">used 47× · ⚠ using defaults</div></div><div class="pol-t"><div class="p pa" style="font-size:10px;">default</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       SCREEN 05 — AUDIT EXPORT + GATEWAY STATUS
+  ══════════════════════════════════════════════════ -->
+  <div class="section-wrap">
+    <div class="section-tag">05 · Audit Export &amp; Gateway Health</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:1280px;margin:0 auto;">
+
+      <!-- AUDIT EXPORT -->
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="browser-dots"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div></div>
+          <div class="browser-url">localhost:3000/audit</div>
+        </div>
+        <div class="app">
+          <div class="topbar"><div style="display:flex;align-items:center;gap:18px;"><div class="logo"><div class="logo-icon">🛡</div>BASTION</div><div class="nav"><a>Dashboard</a><a class="on">Audit</a></div></div><div class="tr"><div class="p pg"><span class="dot"></span>Live</div><div class="av">VU</div></div></div>
+          <div class="body">
+            <div style="font-size:20px;font-weight:600;color:#f4f4f5;margin-bottom:4px;">Compliance Export</div>
+            <div style="font-size:13px;color:#52525b;margin-bottom:18px;">Generate audit reports for regulators, legal counsel, or internal review.</div>
+            <div class="g2" style="margin-bottom:14px;">
+              <div>
+                <div class="card" style="margin-bottom:12px;">
+                  <div class="card-head"><span class="card-title">Date Range</span></div>
+                  <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+                    <div style="display:flex;gap:8px;">
+                      <div style="flex:1;"><div class="lbl">From</div><input class="inp" value="2026-04-01"/></div>
+                      <div style="flex:1;"><div class="lbl">To</div><input class="inp" value="2026-04-30"/></div>
+                    </div>
+                    <div style="display:flex;gap:6px;">
+                      <button class="btn btn-s sm">7d</button><button class="btn btn-s sm">30d</button><button class="btn btn-s sm">90d</button>
+                      <button class="btn sm" style="background:rgba(29,78,216,.12);color:#93c5fd;border:1px solid rgba(29,78,216,.25);">Q1 2026</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-head"><span class="card-title">Format</span></div>
+                  <div style="padding:14px;display:flex;flex-direction:column;gap:8px;">
+                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#d4d4d8;cursor:pointer;"><input type="radio" name="fmt" checked style="accent-color:#1d4ed8;"/> PDF <span style="font-size:11px;color:#3f3f46;">signed, for auditors</span></label>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#d4d4d8;cursor:pointer;"><input type="radio" name="fmt" style="accent-color:#1d4ed8;"/> JSON <span style="font-size:11px;color:#3f3f46;">raw + full chain</span></label>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#d4d4d8;cursor:pointer;"><input type="radio" name="fmt" style="accent-color:#1d4ed8;"/> CSV <span style="font-size:11px;color:#3f3f46;">tabular</span></label>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="card" style="margin-bottom:12px;">
+                  <div class="card-head"><span class="card-title">Report Contents</span></div>
+                  <div style="padding:14px;display:flex;flex-direction:column;gap:8px;">
+                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#a1a1aa;"><input type="checkbox" checked style="accent-color:#1d4ed8;"/> Chain verification result</label>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#a1a1aa;"><input type="checkbox" checked style="accent-color:#1d4ed8;"/> Summary statistics</label>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#a1a1aa;"><input type="checkbox" checked style="accent-color:#1d4ed8;"/> Actor breakdown</label>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#a1a1aa;"><input type="checkbox" checked style="accent-color:#1d4ed8;"/> Full event table + hashes</label>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#a1a1aa;"><input type="checkbox" style="accent-color:#1d4ed8;"/> Raw tool arguments <span style="font-size:10px;color:#3f3f46;">(off for HIPAA)</span></label>
+                  </div>
+                </div>
+                <button class="btn btn-p" style="width:100%;justify-content:center;padding:10px;">Generate Export</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head"><span class="card-title">Recent Exports</span></div>
+              <div style="padding:0 14px;">
+                <div class="hr"><div><div style="font-size:12px;font-weight:500;color:#d4d4d8;">Apr 1 – Apr 30 · PDF</div><div style="font-size:11px;color:#3f3f46;">vinay · 2.4 MB · today 14:32</div></div><div style="display:flex;gap:6px;"><div class="p pg" style="font-size:10px;">✓ ready</div><button class="btn btn-s sm">⬇ Download</button></div></div>
+                <div class="hr"><div><div style="font-size:12px;font-weight:500;color:#d4d4d8;">Q1 2026 · JSON</div><div style="font-size:11px;color:#3f3f46;">auditor · 8.1 MB · yesterday</div></div><div style="display:flex;gap:6px;"><div class="p pg" style="font-size:10px;">✓ ready</div><button class="btn btn-s sm">⬇ Download</button></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GATEWAY STATUS -->
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="browser-dots"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div></div>
+          <div class="browser-url">localhost:3000/settings#gateway</div>
+        </div>
+        <div class="app">
+          <div class="topbar"><div class="logo"><div class="logo-icon">🛡</div>BASTION</div><div class="tr"><div class="p pg"><span class="dot"></span>Live</div><div class="av">VU</div></div></div>
+          <div class="tabs"><div class="tab">API Keys</div><div class="tab">Notifications</div><div class="tab">Redaction</div><div class="tab">Team</div><div class="tab on">Gateway</div></div>
+          <div class="body">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <div><div style="font-size:16px;font-weight:600;color:#f4f4f5;">Gateway Status</div><div style="font-size:12px;color:#52525b;margin-top:3px;">v1.2.0 · uptime 14d 3h · 127 actions/hour</div></div>
+              <div class="p pg" style="padding:6px 12px;font-size:12px;"><span class="dot"></span>All systems operational</div>
+            </div>
+            <div class="card" style="margin-bottom:14px;">
+              <div class="card-head"><span class="card-title">Component Health</span></div>
+              <div style="padding:0 16px;">
+                <div class="hr"><div class="hr-l">🗄️ Database (Supabase)</div><div style="display:flex;gap:7px;align-items:center;"><span style="font-size:11px;color:#3f3f46;">12ms p95</span><div class="p pg" style="font-size:10px;"><span class="dot"></span>ok</div></div></div>
+                <div class="hr"><div class="hr-l">🟩 Notifier (Slack)</div><div style="display:flex;gap:7px;align-items:center;"><span style="font-size:11px;color:#3f3f46;">89ms p95</span><div class="p pg" style="font-size:10px;"><span class="dot"></span>ok</div></div></div>
+                <div class="hr"><div class="hr-l">🦙 Redactor (Ollama)</div><div style="display:flex;gap:7px;align-items:center;"><span style="font-size:11px;color:#3f3f46;">340ms p95</span><div class="p pg" style="font-size:10px;"><span class="dot"></span>ok</div></div></div>
+                <div class="hr"><div class="hr-l">🔗 Audit Chain</div><div style="display:flex;gap:7px;align-items:center;"><span style="font-size:11px;color:#3f3f46;">verified 30s ago</span><div class="p pg" style="font-size:10px;">✓ intact</div></div></div>
+                <div class="hr"><div class="hr-l">🧹 Stale Sweeper</div><div style="display:flex;gap:7px;align-items:center;"><span style="font-size:11px;color:#3f3f46;">ran 47s ago · 2 denied</span><div class="p pg" style="font-size:10px;"><span class="dot"></span>ok</div></div></div>
+              </div>
+            </div>
+            <div style="font-size:11px;font-weight:600;color:#3f3f46;text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px;">Behaviour Settings</div>
+            <div class="card">
+              <div style="padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div><div class="lbl">Approval timeout (s)</div><input class="inp" value="600"/></div>
+                <div><div class="lbl">Fallback on down</div><select class="inp"><option>deny</option><option>allow</option><option>raise</option></select></div>
+                <div><div class="lbl">HTTP timeout (s)</div><input class="inp" value="5"/></div>
+                <div><div class="lbl">Retry attempts</div><input class="inp" value="3"/></div>
+                <div><div class="lbl">Log level</div><select class="inp"><option>INFO</option><option>DEBUG</option><option>WARNING</option></select></div>
+                <div style="display:flex;align-items:flex-end;"><button class="btn btn-p sm">Save changes</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

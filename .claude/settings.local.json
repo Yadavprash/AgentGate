@@ -5,7 +5,8 @@
       "PowerShell(pip --version)",
       "PowerShell(pip install -r requirements-dev.txt)",
       "PowerShell(\"cleaned\")",
-      "PowerShell($env:Path = \"C:\\\\Users\\\\Windows\\\\AppData\\\\Local\\\\nvm\\\\v20.19.0;\" + $env:Path; Push-Location dashboard; npm install; Pop-Location)"
+      "PowerShell($env:Path = \"C:\\\\Users\\\\Windows\\\\AppData\\\\Local\\\\nvm\\\\v20.19.0;\" + $env:Path; Push-Location dashboard; npm install; Pop-Location)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }

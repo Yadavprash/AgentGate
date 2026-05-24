@@ -56,9 +56,9 @@ dev         = [
 ]
 
 [project.urls]
-Homepage      = "https://github.com/anthropics/bastion-sdk"
-Documentation = "https://github.com/anthropics/bastion-sdk#readme"
-Issues        = "https://github.com/anthropics/bastion-sdk/issues"
+Homepage      = "https://github.com/Yadavprash/AgentGate"
+Documentation = "https://github.com/Yadavprash/AgentGate#readme"
+Issues        = "https://github.com/Yadavprash/AgentGate/issues"
 
 [project.scripts]
 bastion = "bastion_sdk.cli:main"

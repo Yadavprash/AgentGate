@@ -2,14 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Python deps first (better layer caching)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# App source
-COPY gateway/ ./gateway/
-COPY agentgate_sdk/ ./agentgate_sdk/
-COPY agent/ ./agent/
+COPY gateway/   ./gateway/
+COPY bastion_sdk/ ./bastion_sdk/
 
 EXPOSE 8000
 

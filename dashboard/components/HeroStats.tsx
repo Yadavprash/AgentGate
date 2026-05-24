@@ -3,92 +3,69 @@ import type { ActionRow } from "@/lib/supabase";
 type Display = Record<string, unknown> | null;
 
 export default function HeroStats({ rows }: { rows: ActionRow[] }) {
-  const intercepts = rows.filter((r) => r.risk === "high").length;
-  const denied = rows.filter(
-    (r) => r.status === "denied" || r.status === "timed_out",
-  );
-  const blockedSpend = denied.reduce((sum, r) => sum + (r.cost ?? 0), 0);
-  const redactions = rows.filter(
-    (r) => (r.display as Display)?.redacted === true,
-  ).length;
+  const pending  = rows.filter((r) => r.status === "intercepted").length;
+  const threats  = rows.filter((r) => (r.display as Display)?.threat === true).length;
+  const heldSpend = rows
+    .filter((r) => r.status === "intercepted" || r.status === "denied" || r.status === "timed_out")
+    .reduce((sum, r) => sum + (r.cost ?? 0), 0);
 
-  const approved = rows.filter(
-    (r) =>
-      (r.status === "approved" || r.status === "completed") && r.decided_at,
-  );
-  const avgApprovalMs =
-    approved.length === 0
-      ? 0
-      : approved.reduce((sum, r) => {
-          const start = new Date(r.created_at).getTime();
-          const end = new Date(r.decided_at as string).getTime();
-          return sum + Math.max(0, end - start);
-        }, 0) / approved.length;
+  // "today" = last 24 h
+  const dayAgo = Date.now() - 86_400_000;
+  const todayRows = rows.filter((r) => new Date(r.created_at).getTime() > dayAgo);
 
   return (
-    <div className="mb-6 grid grid-cols-4 gap-4">
-      <Metric
-        label="Total actions"
+    <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <StatCard
         value={rows.length.toString()}
-        sublabel="across all agent runs"
-        accent="zinc"
+        label="Total Actions"
+        sub={`↑ ${todayRows.length} today`}
+        subColor="text-emerald-400"
       />
-      <Metric
-        label="High-risk intercepts"
-        value={intercepts.toString()}
-        sublabel={`${redactions} PII redactions`}
-        accent="amber"
+      <StatCard
+        value={pending.toString()}
+        label="Pending Approval"
+        sub={pending > 0 ? `${pending} expiring soon` : "none waiting"}
+        subColor="text-amber-400"
+        valueColor="text-amber-400"
       />
-      <Metric
-        label="Blocked spend"
-        value={`$${blockedSpend.toFixed(2)}`}
-        sublabel={`${denied.length} denied`}
-        accent="red"
+      <StatCard
+        value={`$${heldSpend >= 1000 ? (heldSpend / 1000).toFixed(1) + "k" : heldSpend.toFixed(0)}`}
+        label="Spend Held"
+        sub="24h window"
+        subColor="text-emerald-400"
+        valueColor="text-emerald-400"
       />
-      <Metric
-        label="Avg approval time"
-        value={avgApprovalMs > 0 ? `${(avgApprovalMs / 1000).toFixed(1)}s` : "—"}
-        sublabel={`${approved.length} approvals`}
-        accent="emerald"
+      <StatCard
+        value={threats.toString()}
+        label="Threats Blocked"
+        sub={threats > 0 ? `↑ ${threats} today` : "none detected"}
+        subColor={threats > 0 ? "text-amber-400" : "text-zinc-500"}
+        valueColor={threats > 0 ? "text-amber-400" : undefined}
       />
     </div>
   );
 }
 
-function Metric({
-  label,
+function StatCard({
   value,
-  sublabel,
-  accent,
+  label,
+  sub,
+  subColor,
+  valueColor,
 }: {
-  label: string;
   value: string;
-  sublabel: string;
-  accent: "zinc" | "amber" | "red" | "emerald";
+  label: string;
+  sub: string;
+  subColor: string;
+  valueColor?: string;
 }) {
-  const accentBorder = {
-    zinc: "border-zinc-200 dark:border-zinc-800",
-    amber: "border-amber-500/40",
-    red: "border-red-500/40",
-    emerald: "border-emerald-500/40",
-  } as const;
-  const accentText = {
-    zinc: "text-zinc-900 dark:text-zinc-100",
-    amber: "text-amber-600 dark:text-amber-300",
-    red: "text-red-600 dark:text-red-300",
-    emerald: "text-emerald-600 dark:text-emerald-300",
-  } as const;
   return (
-    <div
-      className={`rounded-lg border bg-white dark:bg-zinc-900/50 p-5 ${accentBorder[accent]}`}
-    >
-      <div className="text-xs uppercase tracking-wide text-zinc-500">
-        {label}
-      </div>
-      <div className={`mt-1 text-3xl font-semibold ${accentText[accent]}`}>
+    <div className="rounded-xl border border-black/[0.08] bg-white p-5 dark:border-white/[0.06] dark:bg-[#13161f]">
+      <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</div>
+      <div className={`mt-1 text-3xl font-bold ${valueColor ?? "text-zinc-900 dark:text-white"}`}>
         {value}
       </div>
-      <div className="mt-1 text-xs text-zinc-500">{sublabel}</div>
+      <div className={`mt-1 text-xs font-medium ${subColor}`}>{sub}</div>
     </div>
   );
 }

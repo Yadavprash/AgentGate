@@ -3,14 +3,23 @@
 /* Class-based dark mode: <html class="dark"> activates dark: variants. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ── Design tokens ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+  --bg-card: #ffffff;
+  --bg-card-alt: #f8fafc;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --dot-pattern: radial-gradient(circle, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #0b0d16;
+  --foreground: #e8eaf0;
+  --bg-card: #13161f;
+  --bg-card-alt: #0f1118;
+  --border-color: rgba(255, 255, 255, 0.06);
+  --dot-pattern: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
 }
 
 @theme inline {
@@ -21,12 +30,15 @@
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
+  background-image: var(--dot-pattern);
+  background-size: 30px 30px;
+  background-attachment: fixed;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans, 'Inter', system-ui, sans-serif);
 }
 
-/* Audit-table animations */
+/* ── Audit table animations ── */
 
 @keyframes pulse-amber {
   0%, 100% {
@@ -44,53 +56,34 @@ body {
 
 @keyframes flash-green {
   0%   { background-color: rgba(16, 185, 129, 0); }
-  20%  { background-color: rgba(16, 185, 129, 0.30); }
+  20%  { background-color: rgba(16, 185, 129, 0.20); }
   100% { background-color: rgba(16, 185, 129, 0); }
 }
-.flash-green {
-  animation: flash-green 2s ease-out 1;
-}
+.flash-green { animation: flash-green 2s ease-out 1; }
 
 @keyframes flash-red {
   0%   { background-color: rgba(239, 68, 68, 0); }
-  20%  { background-color: rgba(239, 68, 68, 0.30); }
+  20%  { background-color: rgba(239, 68, 68, 0.20); }
   100% { background-color: rgba(239, 68, 68, 0); }
 }
-.flash-red {
-  animation: flash-red 2s ease-out 1;
-}
+.flash-red { animation: flash-red 2s ease-out 1; }
 
-/* THREAT BLOCKED banner pulse - heavy red glow */
 @keyframes threat-pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55), 0 0 14px 0 rgba(239, 68, 68, 0.18);
-  }
-  50% {
-    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18), 0 0 32px 6px rgba(239, 68, 68, 0.45);
-  }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.55), 0 0 14px 0 rgba(239,68,68,0.18); }
+  50%       { box-shadow: 0 0 0 4px rgba(239,68,68,0.18), 0 0 32px 6px rgba(239,68,68,0.45); }
 }
-.threat-pulse {
-  animation: threat-pulse 1.6s ease-in-out infinite;
-}
+.threat-pulse { animation: threat-pulse 1.6s ease-in-out infinite; }
 
-/* Action detail drawer slide-in */
+@keyframes threat-pulse-amber {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.55), 0 0 14px 0 rgba(245,158,11,0.18); }
+  50%       { box-shadow: 0 0 0 4px rgba(245,158,11,0.18), 0 0 32px 6px rgba(245,158,11,0.45); }
+}
+.threat-pulse-amber { animation: threat-pulse-amber 1.6s ease-in-out infinite; }
+
 @keyframes slide-in-right {
   from { transform: translateX(100%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
 }
 .slide-in-right {
   animation: slide-in-right 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-/* Amber variant for the "still awaiting human" state */
-@keyframes threat-pulse-amber {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55), 0 0 14px 0 rgba(245, 158, 11, 0.18);
-  }
-  50% {
-    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18), 0 0 32px 6px rgba(245, 158, 11, 0.45);
-  }
-}
-.threat-pulse-amber {
-  animation: threat-pulse-amber 1.6s ease-in-out infinite;
 }

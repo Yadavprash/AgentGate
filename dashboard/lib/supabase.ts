@@ -53,6 +53,7 @@ export type ActionRow = {
   status: ActionStatus;
   display: Record<string, unknown>;
   cost: number | null;
+  trace_id: string | null;
   created_at: string;
   decided_at: string | null;
   completed_at: string | null;

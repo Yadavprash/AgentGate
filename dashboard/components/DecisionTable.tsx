@@ -12,31 +12,53 @@ function time(ts: string) {
   });
 }
 
-function actorClass(actor: DecisionActor): string {
-  if (actor === "human") return "text-amber-600 dark:text-amber-300";
-  if (actor === "ai") return "text-sky-600 dark:text-sky-300";
-  return "text-zinc-700 dark:text-zinc-300";
+function ActorPill({ actor }: { actor: DecisionActor }) {
+  const cls =
+    actor === "human"
+      ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+      : actor === "ai"
+      ? "border-sky-500/30 bg-sky-500/10 text-sky-400"
+      : "border-zinc-500/30 bg-zinc-500/10 text-zinc-400";
+  return (
+    <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}>
+      {actor}
+    </span>
+  );
+}
+
+function DecisionPill({ kind }: { kind: string }) {
+  const cls =
+    kind === "approved" || kind === "auto_approved"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+      : kind === "denied" || kind === "timed_out"
+      ? "border-red-500/30 bg-red-500/10 text-red-400"
+      : kind === "intercepted"
+      ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+      : kind === "redaction" || kind === "pii_redacted"
+      ? "border-indigo-500/30 bg-indigo-500/10 text-indigo-400"
+      : kind === "threat"
+      ? "border-red-500/30 bg-red-500/15 text-red-400"
+      : "border-zinc-500/30 bg-zinc-500/10 text-zinc-400";
+  const label = kind === "auto_approved" ? "approved" : kind;
+  return (
+    <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${cls}`}>
+      {label}
+    </span>
+  );
 }
 
 function payloadSummary(row: AuditEventRow): string {
   const payload = row.payload as Payload;
-  if (!payload || typeof payload !== "object") return "-";
-
+  if (!payload || typeof payload !== "object") return "—";
   if (typeof payload.summary === "string" && payload.summary.trim()) {
     const s = payload.summary.trim();
-    return s.length > 120 ? `${s.slice(0, 120)}...` : s;
+    return s.length > 80 ? `${s.slice(0, 80)}…` : s;
   }
-
-  if (typeof payload.tool === "string") {
-    const mode = typeof payload.mode === "string" ? ` mode=${payload.mode}` : "";
-    return `tool=${payload.tool}${mode}`;
-  }
-
-  if (typeof payload.status === "string") return `status=${payload.status}`;
-  if (typeof payload.backend === "string") return `backend=${payload.backend}`;
-
+  if (typeof payload.tool === "string") return `tool=${payload.tool}`;
+  if (typeof payload.by === "string") return `by:${payload.by}`;
+  if (typeof payload.amount !== "undefined") return `amount=${payload.amount}`;
   const entries = Object.entries(payload).slice(0, 2);
-  if (entries.length === 0) return "-";
+  if (entries.length === 0) return "—";
   return entries.map(([k, v]) => `${k}=${String(v)}`).join(", ");
 }
 
@@ -49,73 +71,62 @@ export default function DecisionTable({
 }) {
   if (rows.length === 0) {
     return (
-      <section className="mt-8 rounded-lg border border-zinc-200 bg-zinc-50 p-8 dark:border-zinc-800 dark:bg-zinc-900/50">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-700 dark:text-zinc-300">
-          Decision Trail
-        </h2>
-        <p className="text-sm text-zinc-500">
-          No decisions yet. Decisions from AI, humans, and system events will appear here.
-        </p>
-      </section>
+      <div className="flex h-full flex-col rounded-xl border border-black/[0.08] bg-white dark:border-white/[0.06] dark:bg-[#13161f]">
+        <div className="border-b border-black/[0.06] px-5 py-3 dark:border-white/[0.04]">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            Decision Trail
+          </span>
+        </div>
+        <div className="flex flex-1 items-center justify-center p-8">
+          <p className="text-sm text-zinc-500">No decisions yet.</p>
+        </div>
+      </div>
     );
   }
 
-  // Show agent column only when multiple agents are present
-  const agentNames = new Set(
-    rows
-      .map((r) => r.action_id && actionMap[r.action_id]?.agent_name)
-      .filter(Boolean),
-  );
-  const showAgent = agentNames.size > 1;
-
   return (
-    <section className="mt-8 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
-      <div className="border-b border-zinc-200 bg-zinc-100 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-700 dark:text-zinc-300">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-black/[0.08] dark:border-white/[0.06]">
+      <div className="flex items-center justify-between border-b border-black/[0.06] bg-white/50 px-5 py-3 dark:border-white/[0.04] dark:bg-[#0f1118]">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
           Decision Trail
-        </h2>
+        </span>
+        <span className="text-[10px] text-zinc-500">last {Math.min(rows.length, 20)} events</span>
       </div>
-      <table className="w-full text-left text-sm">
-        <thead className="bg-zinc-100 text-xs uppercase tracking-wide text-zinc-600 dark:bg-zinc-900 dark:text-zinc-500">
-          <tr>
-            <th className="px-4 py-3">Time</th>
-            <th className="px-4 py-3">Action</th>
-            {showAgent && <th className="px-4 py-3">Agent</th>}
-            <th className="px-4 py-3">Version</th>
-            <th className="px-4 py-3">Actor</th>
-            <th className="px-4 py-3">Decision</th>
-            <th className="px-4 py-3">Detail</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-800 dark:bg-zinc-950">
-          {rows.map((row) => {
-            const agentName = row.action_id ? actionMap[row.action_id]?.agent_name : undefined;
-            return (
-              <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/60">
-                <td className="px-4 py-3 font-mono text-xs text-zinc-500">{time(row.created_at)}</td>
-                <td className="px-4 py-3 font-mono text-xs text-zinc-600 dark:text-zinc-400">
-                  {row.action_id ? row.action_id.slice(0, 8) : "-"}
+
+      <div className="overflow-y-auto bg-white dark:bg-[#13161f]">
+        <table className="w-full text-left">
+          <thead className="border-b border-black/[0.06] text-[10px] uppercase tracking-wider text-zinc-500 dark:border-white/[0.04]">
+            <tr>
+              <th className="px-4 py-2.5">Time</th>
+              <th className="px-4 py-2.5">Action</th>
+              <th className="px-4 py-2.5">Actor</th>
+              <th className="px-4 py-2.5">Decision</th>
+              <th className="px-4 py-2.5">Detail</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
+            {rows.slice(0, 20).map((row) => (
+              <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors">
+                <td className="px-4 py-2.5 font-mono text-[11px] tabular-nums text-zinc-500">
+                  {time(row.created_at)}
                 </td>
-                {showAgent && (
-                  <td className="px-4 py-3 text-xs text-zinc-700 dark:text-zinc-300">
-                    {agentName ?? <span className="text-zinc-400">—</span>}
-                  </td>
-                )}
-                <td className="px-4 py-3 font-mono text-xs text-zinc-700 dark:text-zinc-300">
-                  v{row.decision_version}
+                <td className="px-4 py-2.5 font-mono text-[11px] text-zinc-500">
+                  {row.action_id ? row.action_id.slice(0, 8) + "…" : "—"}
                 </td>
-                <td className={`px-4 py-3 text-xs font-semibold uppercase ${actorClass(row.actor)}`}>
-                  {row.actor}
+                <td className="px-4 py-2.5">
+                  <ActorPill actor={row.actor} />
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-zinc-700 dark:text-zinc-300">
-                  {row.decision_kind} / {row.event_type}
+                <td className="px-4 py-2.5">
+                  <DecisionPill kind={row.event_type} />
                 </td>
-                <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{payloadSummary(row)}</td>
+                <td className="px-4 py-2.5 text-[11px] text-zinc-500">
+                  {payloadSummary(row)}
+                </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </section>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
