@@ -19,10 +19,12 @@ class Settings:
 
     anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
 
-    gateway_url = os.getenv("AGENTGATE_GATEWAY_URL", "http://localhost:8000")
+    gateway_url = os.getenv("BASTION_GATEWAY_URL", "http://localhost:8000")
     gate_shared_secret = os.getenv("GATE_SHARED_SECRET", "changeme")
 
-    approval_timeout = 300  # seconds the gateway holds a frozen request
+    # Seconds the gateway holds a frozen request before auto-denying.
+    # Override via APPROVAL_TIMEOUT_SECONDS in .env (default: 10 minutes).
+    approval_timeout: int = int(os.getenv("APPROVAL_TIMEOUT_SECONDS", "600"))
 
     @property
     def supabase_enabled(self) -> bool:

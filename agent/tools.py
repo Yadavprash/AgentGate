@@ -5,7 +5,7 @@ Low-risk tools auto-pass; `solve_captcha` and `execute_purchase` are intercepted
 import os
 import random
 
-from agentgate_sdk import gate
+from bastion_sdk import gate
 
 # A generated image whose text the human reads off and types back.
 CAPTCHA_IMAGE_URL = "https://dummyimage.com/360x120/dddddd/222222.png&text=7G4K9"

@@ -87,47 +87,184 @@ AgentGate/
 
 ---
 
-## Quick start
+## Setting up the repo
 
-**Prerequisites:** Python 3.10+, Node 18+, accounts for Supabase, Discord, and
-Anthropic. Optional: Razorpay test account, Ollama for semantic redaction.
+The fastest path is `docker compose up` — it skips every Python and Node version issue below. Use the manual setup if you want to debug, run tests, or step through agent code with VS Code.
+
+### 0 — Prerequisites
+
+| Tool | Version | Used by |
+|---|---|---|
+| **Python** | 3.10+ | gateway, SDK, agents, tests |
+| **Node** | **20.9+** (Next 16 requires it; pinned in [`dashboard/.nvmrc`](dashboard/.nvmrc)) | dashboard |
+| **Supabase project** | free tier is fine | actions table + realtime |
+| **Discord application** | with a bot user + a guild + a channel | approval cards |
+| **Anthropic API key** | with Claude 4.x access | agent's LLM |
+| Razorpay test keys | optional | real test-mode charge in domain-buying demo |
+| Ollama | optional | semantic PII redaction (fallback is a regex redactor) |
+
+### 1 — Clone and create the Python venv
 
 ```bash
-# 1. Backend deps
-pip install -r requirements.txt
-
-# 2. Supabase setup
-#   - create a project at supabase.com
-#   - in the SQL editor, run supabase/schema.sql
-
-# 3. Discord setup
-#   - create an application at discord.com/developers/applications
-#   - reset the bot token, invite the bot to a server with Send Messages perms,
-#     enable Developer Mode and copy a channel ID
-
-# 4. .env
-cp .env.example .env
-# fill in SUPABASE_URL, SUPABASE_SERVICE_KEY,
-#         DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID,
-#         ANTHROPIC_API_KEY,
-#         RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET   (optional)
-#         LOCAL_LLM_URL                            (optional - Ollama)
-
-# 5. Dashboard env
-cd dashboard && cp .env.local.example .env.local
-# fill in NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-# 6. Run everything (3 terminals)
-uvicorn gateway.main:app --port 8000      # gateway + Discord bot
-cd dashboard && npm install && npm run dev # dashboard at :3000
-python -m agent.run                        # the demo agent
+git clone <this-repo>
+cd AgentGate
+python -m venv .venv
 ```
 
-Or one-command with Docker:
+Then **activate it** — every command in this guide assumes the venv is active.
+
+```bash
+# macOS / Linux
+source .venv/bin/activate
+
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+
+# Windows cmd
+.venv\Scripts\activate.bat
+```
+
+Your prompt should now show a `(.venv)` prefix. If PowerShell rejects `Activate.ps1`, run once: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`.
+
+### 2 — Install Python dependencies
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install -r requirements-dev.txt   # only if you'll run pytest
+```
+
+Sanity check the venv: `which python` (Linux/mac) or `(Get-Command python).Source` (PowerShell) must point inside `.venv/`. If not, the venv isn't activated — go back to step 1.
+
+### 3 — Stand up the external services
+
+**3a. Supabase**
+
+1. Create a project at <https://supabase.com>.
+2. In the SQL editor, paste and run the entire contents of [`supabase/schema.sql`](supabase/schema.sql). This creates the `actions` table, the `audit_events` table, the realtime publication, and the RLS policies.
+3. From **Project Settings → API**, copy:
+   - **Project URL** → `SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL`
+   - **`anon` public key** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - **`service_role` secret key** → `SUPABASE_SERVICE_KEY`
+
+**3b. Discord**
+
+1. Create an app at <https://discord.com/developers/applications> → **Bot** → reset token → `DISCORD_BOT_TOKEN`.
+2. Under **OAuth2 → URL Generator**, scope `bot`, permissions `Send Messages`, `Embed Links`, `Read Message History`. Open the generated URL and invite the bot to a server.
+3. In Discord, enable Developer Mode (User Settings → Advanced), right-click the channel you want approval cards in → **Copy Channel ID** → `DISCORD_CHANNEL_ID`.
+
+**3c. Anthropic**
+
+Get an API key at <https://console.anthropic.com> → `ANTHROPIC_API_KEY`.
+
+### 4 — Configure environment files
+
+Both files must point at the **same** Supabase project, or the dashboard will load but show nothing.
+
+**Root `.env`** (consumed by the gateway):
+
+```bash
+cp .env.example .env
+```
+
+Then fill in `.env` with the values from step 3:
+
+```env
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_SERVICE_KEY=<service_role key>
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+DISCORD_BOT_TOKEN=<bot token>
+DISCORD_CHANNEL_ID=<channel id>
+ANTHROPIC_API_KEY=<key>
+GATE_SHARED_SECRET=<any random string>
+# Razorpay + LOCAL_LLM_URL are optional
+```
+
+**Dashboard `dashboard/.env.local`** (consumed by Next.js, **same values** as the two `NEXT_PUBLIC_*` keys above):
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+```
+
+> **Heads up:** Next.js reads `.env.local` only at startup. If you change it, restart `npm run dev`.
+
+### 5 — Install dashboard dependencies
+
+```bash
+cd dashboard
+npm install
+cd ..
+```
+
+If `npm install` complains about Node version, you're on the wrong Node. See [Windows gotchas](#windows-gotchas) below.
+
+### 6 — Smoke-test the install
+
+With the venv active:
+
+```bash
+# 1. Boot the gateway in one terminal
+uvicorn gateway.main:app --port 8000
+```
+
+In a second terminal:
+
+```bash
+# 2. Health check — must say "supabase": true, "discord": true
+curl http://localhost:8000/healthz
+```
+
+If `supabase` or `discord` is `false`, the gateway can't see your keys — re-check `.env` and make sure the gateway terminal has the venv activated.
+
+```bash
+# 3. Run the test suite
+pytest -v
+```
+
+All 32 tests should pass. If they don't, your `.venv` probably has stale deps — `pip install -r requirements.txt` again.
+
+### 7 — Run the full stack
+
+Three terminals, all with the venv activated where Python is needed:
+
+```bash
+# Terminal 1 — gateway + Discord bot
+uvicorn gateway.main:app --port 8000
+
+# Terminal 2 — dashboard at http://localhost:3000
+cd dashboard && npm run dev
+
+# Terminal 3 — pick one of the four demos
+python -m agent.run                # domain buying  (approval + INPUT + Modify Budget)
+python -m agent.bank_run           # bank login     (PII redaction proof)
+python -m agent.injection_run      # prompt injection defense
+python -m agent.run --unsafe       # contrast: agent with AgentGate disabled
+```
+
+Open <http://localhost:3000>. The status chip should switch from "Connecting…" to **Live**. As the agent runs, rows stream in.
+
+### Docker shortcut
+
+If you have Docker, the entire setup collapses to:
 
 ```bash
 docker compose up
 ```
+
+You still need `.env` and `dashboard/.env.local` filled in (step 4), and you still need to run the Supabase schema (step 3a) and Discord setup (step 3b). Docker just handles the Python/Node side.
+
+<a id="windows-gotchas"></a>
+### Windows gotchas worth knowing
+
+These all bit us during real onboarding — none are obvious from error messages.
+
+- **Node keeps reverting to an old version (e.g., 18.x).** Volta and nvm-windows both install a `node` shim. Volta's shim is first on PATH, so `nvm use 20.9.0` silently does nothing — Volta resolves `node` to its own pinned default. Fix: either `volta pin node@20.9.0` inside the repo (writes the pin into `package.json`, survives Git, auto-installs on first use) or remove `C:\Program Files\Volta\` from PATH.
+- **Gateway returns 500 on every request, but `/healthz` is fine.** Almost always the wrong Python interpreter — `uvicorn` was launched against system Python (which has stale Supabase deps) instead of the project `.venv`. Pin VS Code to the venv: create `.vscode/settings.json` with `"python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe"`, **Developer: Reload Window**, then re-launch.
+- **PowerShell blocks `Activate.ps1`.** Once: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`.
+- **Dashboard shows "Connecting…" forever, no rows.** `dashboard/.env.local` and `.env` are pointing at different Supabase projects. Sync the two `NEXT_PUBLIC_*` values, restart `npm run dev` — Next reads `.env.local` only at boot.
+- **Port 8000 stuck even after killing uvicorn.** Uvicorn with `--reload` spawns a worker child; killing the parent leaves the child holding the port. `Get-Process python` to find the orphan, `Stop-Process -Id <pid> -Force`.
 
 ---
 
@@ -211,7 +348,7 @@ matrix, and one real-server integration test.
 - **Agent runtime**: LangChain + `langchain-anthropic`, Claude Sonnet 4.6
 - **Payment**: Razorpay test mode (Stripe-equivalent, India-friendly)
 - **PII redaction**: regex by default, Ollama (local LLM) optional
-- **Dashboard**: Next.js 14 (App Router) + Tailwind v4
+- **Dashboard**: Next.js 16 (App Router) + Tailwind v4
 - **Deployment**: Docker Compose
 
 ---

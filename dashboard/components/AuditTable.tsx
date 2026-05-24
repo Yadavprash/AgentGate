@@ -45,7 +45,13 @@ function flashClassFor(row: ActionRow): string {
   return "";
 }
 
-export default function AuditTable({ rows }: { rows: ActionRow[] }) {
+export default function AuditTable({
+  rows,
+  onSelect,
+}: {
+  rows: ActionRow[];
+  onSelect?: (row: ActionRow) => void;
+}) {
   // Re-render every second so the countdown ticks and the 2-second flash window
   // gets re-evaluated.
   const [, setTick] = useState(0);
@@ -56,16 +62,16 @@ export default function AuditTable({ rows }: { rows: ActionRow[] }) {
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-10 text-center text-zinc-500">
+      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-10 text-center text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50">
         No actions yet. Run the agent to see interceptions stream in live.
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-zinc-800">
+    <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
       <table className="w-full text-left text-sm">
-        <thead className="bg-zinc-900 text-xs uppercase tracking-wide text-zinc-500">
+        <thead className="bg-zinc-100 text-xs uppercase tracking-wide text-zinc-600 dark:bg-zinc-900 dark:text-zinc-500">
           <tr>
             <th className="px-4 py-3">Time</th>
             <th className="px-4 py-3">Agent</th>
@@ -76,12 +82,13 @@ export default function AuditTable({ rows }: { rows: ActionRow[] }) {
             <th className="px-4 py-3">Status</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-zinc-800 bg-zinc-950">
+        <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-800 dark:bg-zinc-950">
           {rows.map((row) => {
             const isWaiting = row.status === "intercepted";
             const flash = flashClassFor(row);
             const rowClasses = [
-              "hover:bg-zinc-900/60",
+              onSelect ? "cursor-pointer" : "",
+              "hover:bg-zinc-50 dark:hover:bg-zinc-900/60",
               isWaiting ? "pulse-amber" : "",
               flash,
             ]
@@ -89,42 +96,44 @@ export default function AuditTable({ rows }: { rows: ActionRow[] }) {
               .join(" ");
             const display = row.display as Display;
             return (
-              <tr key={row.id} className={rowClasses}>
+              <tr key={row.id} className={rowClasses} onClick={() => onSelect?.(row)}>
                 <td className="px-4 py-3 font-mono text-xs text-zinc-500">
                   {time(row.created_at)}
                 </td>
-                <td className="px-4 py-3 text-zinc-300">{row.agent_name}</td>
-                <td className="px-4 py-3 font-mono text-xs text-zinc-200">
+                <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{row.agent_name}</td>
+                <td className="px-4 py-3 font-mono text-xs text-zinc-800 dark:text-zinc-200">
                   <span className="inline-flex items-center gap-1.5">
                     {row.tool_name}
                     {display?.redacted ? (
                       <span
                         title="PII redacted locally — cloud LLM never saw the raw value"
-                        className="rounded border border-purple-500/40 bg-purple-500/15 px-1.5 py-0.5 text-[10px] font-medium text-purple-300"
+                        className="rounded border border-purple-500/40 bg-purple-500/15 px-1.5 py-0.5 text-[10px] font-medium text-purple-700 dark:text-purple-300"
                       >
                         🔒 PII
                       </span>
                     ) : null}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-zinc-400">{detail(row)}</td>
+                <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{detail(row)}</td>
                 <td className="px-4 py-3">
                   <span
                     className={
-                      row.risk === "high" ? "text-red-400" : "text-zinc-500"
+                      row.risk === "high"
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-zinc-500"
                     }
                   >
                     {row.risk.toUpperCase()}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-zinc-300">
+                <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
                   {row.cost != null ? `$${Number(row.cost).toFixed(2)}` : "—"}
                 </td>
                 <td className="px-4 py-3">
                   {isWaiting ? (
                     <span className="inline-flex items-center gap-2">
                       <StatusChip status={row.status} />
-                      <span className="font-mono text-xs text-amber-300">
+                      <span className="font-mono text-xs text-amber-600 dark:text-amber-300">
                         Frozen {formatElapsed(row.created_at)}
                       </span>
                     </span>

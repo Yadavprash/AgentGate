@@ -5,7 +5,7 @@ Exercises every AgentGate primitive in one run:
   - sensitive=True (PII redact)   enter_credentials, read_transactions
   - mode='input' (human as tool)  solve_captcha, enter_otp
 """
-from agentgate_sdk import gate
+from bastion_sdk import gate
 
 # Pretend local vault. In production this would be the OS keychain, 1Password,
 # HashiCorp Vault, etc. - never reachable by the cloud LLM.

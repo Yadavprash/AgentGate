@@ -14,6 +14,21 @@ async def _decorate(message: discord.Message, text: str, color: discord.Color) -
     await message.edit(embed=embed, view=None)
 
 
+async def _safe_error(interaction: discord.Interaction, label: str, exc: Exception) -> None:
+    """Acknowledge the interaction and log the error so Discord doesn't show 'Interaction Failed'."""
+    print(f"[discord] error in {label}: {exc}")
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.defer()
+        await interaction.followup.send(
+            f"Something went wrong handling this action (`{exc}`). "
+            "The agent may have already timed out — try restarting the agent run.",
+            ephemeral=True,
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+
 class BudgetModal(discord.ui.Modal):
     """Collect a new max budget; the agent receives BUDGET CHANGED and re-plans."""
 
@@ -46,6 +61,9 @@ class BudgetModal(discord.ui.Modal):
             discord.Color.blurple(),
         )
 
+    async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
+        await _safe_error(interaction, f"BudgetModal/{self.job_id}", error)
+
 
 class ApprovalView(discord.ui.View):
     """APPROVAL mode — Approve / Deny, plus Modify Budget when the action has a cost."""
@@ -53,14 +71,26 @@ class ApprovalView(discord.ui.View):
     def __init__(self, job_id: str, show_budget: bool = True):
         super().__init__(timeout=settings.approval_timeout)
         self.job_id = job_id
+        self._message: discord.Message | None = None
         if not show_budget:
             for item in list(self.children):
                 if getattr(item, "label", None) == "Modify Budget":
                     self.remove_item(item)
 
+    async def on_timeout(self) -> None:
+        if self._message:
+            try:
+                await _decorate(self._message, "Timed out — no response received.", discord.Color.dark_grey())
+            except Exception:  # noqa: BLE001
+                pass
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception, _) -> None:
+        await _safe_error(interaction, f"ApprovalView/{self.job_id}", error)
+
     @discord.ui.button(label="Approve", style=discord.ButtonStyle.success, emoji="✅")
     async def approve(self, interaction: discord.Interaction, _: discord.ui.Button):
         await interaction.response.defer()
+        self._message = interaction.message
         pause.resolve(self.job_id, {"decision": "approved"})
         await _decorate(
             interaction.message,
@@ -72,6 +102,7 @@ class ApprovalView(discord.ui.View):
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.danger, emoji="✋")
     async def deny(self, interaction: discord.Interaction, _: discord.ui.Button):
         await interaction.response.defer()
+        self._message = interaction.message
         pause.resolve(self.job_id, {"decision": "denied"})
         await _decorate(
             interaction.message,
@@ -84,6 +115,7 @@ class ApprovalView(discord.ui.View):
     async def modify_budget(
         self, interaction: discord.Interaction, _: discord.ui.Button
     ):
+        self._message = interaction.message
         await interaction.response.send_modal(
             BudgetModal(self.job_id, interaction.message)
         )
@@ -126,6 +158,9 @@ class CaptchaModal(discord.ui.Modal):
             discord.Color.green(),
         )
 
+    async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
+        await _safe_error(interaction, f"CaptchaModal/{self.job_id}", error)
+
 
 class CaptchaView(discord.ui.View):
     """INPUT mode - a button that opens a modal for the human-supplied value.
@@ -140,6 +175,7 @@ class CaptchaView(discord.ui.View):
         super().__init__(timeout=settings.approval_timeout)
         self.job_id = job_id
         self.modal_kwargs = modal_kwargs or {}
+        self._message: discord.Message | None = None
         # The class-decorator button is bound at class load time with the
         # default label. Override it on the live instance.
         for child in self.children:
@@ -150,8 +186,19 @@ class CaptchaView(discord.ui.View):
                 child.label = button_label
                 break
 
+    async def on_timeout(self) -> None:
+        if self._message:
+            try:
+                await _decorate(self._message, "Timed out — no response received.", discord.Color.dark_grey())
+            except Exception:  # noqa: BLE001
+                pass
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception, _) -> None:
+        await _safe_error(interaction, f"CaptchaView/{self.job_id}", error)
+
     @discord.ui.button(label="Solve CAPTCHA", style=discord.ButtonStyle.primary, emoji="\U0001f513")
     async def solve(self, interaction: discord.Interaction, _: discord.ui.Button):
+        self._message = interaction.message
         await interaction.response.send_modal(
             CaptchaModal(self.job_id, interaction.message, **self.modal_kwargs)
         )
@@ -159,6 +206,7 @@ class CaptchaView(discord.ui.View):
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.danger, emoji="✋")
     async def deny(self, interaction: discord.Interaction, _: discord.ui.Button):
         await interaction.response.defer()
+        self._message = interaction.message
         pause.resolve(self.job_id, {"decision": "denied"})
         await _decorate(
             interaction.message,

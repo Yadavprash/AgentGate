@@ -1,15 +1,16 @@
-"""Shared pytest fixtures. Every test runs fully offline — Discord and Supabase
-are forced off, so no network, no credentials, no real server (except the one
-explicit integration test)."""
+"""Shared pytest fixtures. Every test runs fully offline — Discord, Supabase,
+and notifiers are forced off, so no network, no credentials, no real server
+(except the one explicit integration test)."""
 import httpx
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport
 
-from agentgate_sdk import policy
-from gateway import pause
+from bastion_sdk import policy
+from bastion_sdk.config import reload_config
+from bastion_sdk.redactor import reset_redactor
+from gateway import auth, pause, notifiers
 from gateway.config import settings
-from gateway.discord_bot import bot as discord_bot
 from gateway.main import app
 
 
@@ -20,13 +21,19 @@ def disable_external(monkeypatch):
     monkeypatch.setattr(settings, "supabase_service_key", "")
     monkeypatch.setattr(settings, "discord_bot_token", "")
     monkeypatch.setattr(settings, "discord_channel_id", 0)
-    # Keep tests fully offline - no Razorpay calls, no Ollama calls.
     monkeypatch.setenv("RAZORPAY_KEY_ID", "")
     monkeypatch.setenv("RAZORPAY_KEY_SECRET", "")
     monkeypatch.setenv("LOCAL_LLM_URL", "")
-    # Drop the cached risk-policy so each test gets a fresh lookup based on
-    # whatever env / files it sets up.
+    monkeypatch.setenv("OLLAMA_ENDPOINT", "")
+    # Auth is forced off when Supabase is disabled. Tests assert this path
+    # works end-to-end (no Authorization header sent).
+    monkeypatch.setenv("BASTION_REQUIRE_AUTH", "0")
+    # Drop caches so each test sees a fresh policy / config / redactor.
     policy.reload()
+    reload_config()
+    reset_redactor()
+    auth.reset_auth_cache()
+    notifiers.reset_notifiers()
 
 
 @pytest.fixture(autouse=True)
@@ -49,19 +56,24 @@ async def client():
 
 @pytest.fixture
 def captured_jobs(monkeypatch):
-    """Capture job_ids the gateway hands to the Discord bot. High-risk tests need
-    this because /gate/intercept only returns the job_id after it is resolved."""
+    """Capture job_ids the gateway hands to its notifier pipeline. High-risk
+    tests need this because /gate/intercept only returns the job_id AFTER it
+    is resolved — and tests need that id to call /gate/decision."""
     jobs: list[str] = []
 
-    async def fake_send_card(job_id, req):
+    async def fake_fanout_send(job_id, req):
         jobs.append(job_id)
 
-    monkeypatch.setattr(discord_bot, "send_card", fake_send_card)
+    async def fake_fanout_decision(job_id, decision, payload=None):
+        return
+
+    monkeypatch.setattr(notifiers, "fanout_send", fake_fanout_send)
+    monkeypatch.setattr(notifiers, "fanout_decision", fake_fanout_decision)
     return jobs
 
 
 class StubGateClient:
-    """Stand-in for GateClient — returns a canned decision and records calls."""
+    """Stand-in for BastionClient — returns a canned decision, records calls."""
 
     def __init__(self, response: dict):
         self.response = dict(response)
@@ -82,30 +94,23 @@ class StubGateClient:
         )
         return self.response
 
+    async def async_intercept(self, tool_name, tool_args, risk="low", mode="approval", display=None):
+        return self.intercept(tool_name, tool_args, risk=risk, mode=mode, display=display)
+
     def complete(self, job_id, status="completed"):
         self.complete_calls.append({"job_id": job_id, "status": status})
 
     def report_redaction(self, job_id, raw, redacted, backend):
         self.redaction_calls.append(
-            {
-                "job_id": job_id,
-                "raw": raw,
-                "redacted": redacted,
-                "backend": backend,
-            }
+            {"job_id": job_id, "raw": raw, "redacted": redacted, "backend": backend}
         )
 
     def report_final_response(self, action_id, summary, status="completed"):
         self.final_response_calls.append(
-            {
-                "action_id": action_id,
-                "summary": summary,
-                "status": status,
-            }
+            {"action_id": action_id, "summary": summary, "status": status}
         )
 
 
 @pytest.fixture
 def stub_client_factory():
-    """Returns the StubGateClient class so a test can build one with its response."""
     return StubGateClient

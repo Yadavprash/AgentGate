@@ -12,7 +12,7 @@ attempt - deny" choice on Discord.
 Whether or not the cloud LLM catches the injection on its own, the
 deterministic external gate makes the outcome safe."""
 
-from agentgate_sdk import gate
+from bastion_sdk import gate
 
 
 _NEWS_RESULTS = {

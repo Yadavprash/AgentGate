@@ -19,6 +19,12 @@ from typing import Any, Optional
 from gateway.config import settings
 from gateway.db import _get_client
 
+# Serializes the read-latest -> compute-hash -> insert sequence so two concurrent
+# record_event calls cannot both link off the same prev_hash. Process-local; if
+# this ever runs under multiple gateway workers, replace with a Postgres advisory
+# lock or move the SELECT+INSERT into a stored procedure.
+_chain_lock = asyncio.Lock()
+
 
 def canonical(
     event_type: str,
@@ -132,6 +138,7 @@ async def record_event(
         ).execute()
 
     try:
-        await asyncio.to_thread(_do)
+        async with _chain_lock:
+            await asyncio.to_thread(_do)
     except Exception as exc:  # noqa: BLE001 - audit must not break the gateway
         print(f"[audit] failed to record {event_type}/{action_id}: {exc}")
